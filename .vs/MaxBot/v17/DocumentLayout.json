@@ -3,12 +3,16 @@
   "WorkspaceRootPath": "C:\\Users\\Katya\\source\\repos\\MaxBot\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{A9B17282-0C33-4740-A250-D9C6EA60318F}|MaxBot\\MaxBot.pyproj|C:\\Users\\Katya\\source\\repos\\MaxBot\\MaxBot\\requirements.txt||{8B382828-6202-11D1-8870-0000F87579D2}",
-      "RelativeMoniker": "D:0:0:{A9B17282-0C33-4740-A250-D9C6EA60318F}|MaxBot\\MaxBot.pyproj|solutionrelative:MaxBot\\requirements.txt||{8B382828-6202-11D1-8870-0000F87579D2}"
-    },
-    {
       "AbsoluteMoniker": "D:0:0:{A9B17282-0C33-4740-A250-D9C6EA60318F}|MaxBot\\MaxBot.pyproj|C:\\Users\\Katya\\source\\repos\\MaxBot\\MaxBot\\server.py||{8B382828-6202-11D1-8870-0000F87579D2}",
       "RelativeMoniker": "D:0:0:{A9B17282-0C33-4740-A250-D9C6EA60318F}|MaxBot\\MaxBot.pyproj|solutionrelative:MaxBot\\server.py||{8B382828-6202-11D1-8870-0000F87579D2}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A9B17282-0C33-4740-A250-D9C6EA60318F}|MaxBot\\MaxBot.pyproj|C:\\Users\\Katya\\source\\repos\\MaxBot\\MaxBot\\bot_logic.py||{8B382828-6202-11D1-8870-0000F87579D2}",
+      "RelativeMoniker": "D:0:0:{A9B17282-0C33-4740-A250-D9C6EA60318F}|MaxBot\\MaxBot.pyproj|solutionrelative:MaxBot\\bot_logic.py||{8B382828-6202-11D1-8870-0000F87579D2}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A9B17282-0C33-4740-A250-D9C6EA60318F}|MaxBot\\MaxBot.pyproj|C:\\Users\\Katya\\source\\repos\\MaxBot\\MaxBot\\requirements.txt||{8B382828-6202-11D1-8870-0000F87579D2}",
+      "RelativeMoniker": "D:0:0:{A9B17282-0C33-4740-A250-D9C6EA60318F}|MaxBot\\MaxBot.pyproj|solutionrelative:MaxBot\\requirements.txt||{8B382828-6202-11D1-8870-0000F87579D2}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{A9B17282-0C33-4740-A250-D9C6EA60318F}|MaxBot\\MaxBot.pyproj|C:\\Users\\Katya\\source\\repos\\MaxBot\\MaxBot\\parser.py||{8B382828-6202-11D1-8870-0000F87579D2}",
@@ -25,25 +29,38 @@
           "SelectedChildIndex": 2,
           "Children": [
             {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "bot_logic.py",
+              "DocumentMoniker": "C:\\Users\\Katya\\source\\repos\\MaxBot\\MaxBot\\bot_logic.py",
+              "RelativeDocumentMoniker": "MaxBot\\bot_logic.py",
+              "ToolTip": "C:\\Users\\Katya\\source\\repos\\MaxBot\\MaxBot\\bot_logic.py",
+              "RelativeToolTip": "MaxBot\\bot_logic.py",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAACQAAAA8AAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.002457|",
+              "WhenOpened": "2026-04-03T13:08:38.144Z",
+              "EditorCaption": ""
+            },
+            {
               "$type": "Bookmark",
               "Name": "ST:0:0:{66f449b5-c823-40bc-9016-02b4d06a1a8e}"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 0,
               "Title": "server.py",
               "DocumentMoniker": "C:\\Users\\Katya\\source\\repos\\MaxBot\\MaxBot\\server.py",
               "RelativeDocumentMoniker": "MaxBot\\server.py",
               "ToolTip": "C:\\Users\\Katya\\source\\repos\\MaxBot\\MaxBot\\server.py",
               "RelativeToolTip": "MaxBot\\server.py",
-              "ViewState": "AgIAAAIAAAAAAAAAAAAcwAoAAAAAAAAAAAAAAA==",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAwAAAAgAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.002457|",
               "WhenOpened": "2026-04-03T11:59:50.585Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 0,
+              "DocumentIndex": 2,
               "Title": "requirements.txt",
               "DocumentMoniker": "C:\\Users\\Katya\\source\\repos\\MaxBot\\MaxBot\\requirements.txt",
               "RelativeDocumentMoniker": "MaxBot\\requirements.txt",
@@ -56,7 +73,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 2,
+              "DocumentIndex": 3,
               "Title": "parser.py",
               "DocumentMoniker": "C:\\Users\\Katya\\source\\repos\\MaxBot\\MaxBot\\parser.py",
               "RelativeDocumentMoniker": "MaxBot\\parser.py",
@@ -64,7 +81,8 @@
               "RelativeToolTip": "MaxBot\\parser.py",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.002457|",
-              "WhenOpened": "2026-04-02T10:57:38.616Z"
+              "WhenOpened": "2026-04-02T10:57:38.616Z",
+              "EditorCaption": ""
             }
           ]
         }

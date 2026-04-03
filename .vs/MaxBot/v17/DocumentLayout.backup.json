@@ -3,16 +3,16 @@
   "WorkspaceRootPath": "C:\\Users\\Katya\\source\\repos\\MaxBot\\",
   "Documents": [
     {
+      "AbsoluteMoniker": "D:0:0:{A9B17282-0C33-4740-A250-D9C6EA60318F}|MaxBot\\MaxBot.pyproj|C:\\Users\\Katya\\source\\repos\\MaxBot\\MaxBot\\requirements.txt||{8B382828-6202-11D1-8870-0000F87579D2}",
+      "RelativeMoniker": "D:0:0:{A9B17282-0C33-4740-A250-D9C6EA60318F}|MaxBot\\MaxBot.pyproj|solutionrelative:MaxBot\\requirements.txt||{8B382828-6202-11D1-8870-0000F87579D2}"
+    },
+    {
       "AbsoluteMoniker": "D:0:0:{A9B17282-0C33-4740-A250-D9C6EA60318F}|MaxBot\\MaxBot.pyproj|C:\\Users\\Katya\\source\\repos\\MaxBot\\MaxBot\\server.py||{8B382828-6202-11D1-8870-0000F87579D2}",
       "RelativeMoniker": "D:0:0:{A9B17282-0C33-4740-A250-D9C6EA60318F}|MaxBot\\MaxBot.pyproj|solutionrelative:MaxBot\\server.py||{8B382828-6202-11D1-8870-0000F87579D2}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{A9B17282-0C33-4740-A250-D9C6EA60318F}|MaxBot\\MaxBot.pyproj|C:\\Users\\Katya\\source\\repos\\MaxBot\\MaxBot\\parser.py||{8B382828-6202-11D1-8870-0000F87579D2}",
       "RelativeMoniker": "D:0:0:{A9B17282-0C33-4740-A250-D9C6EA60318F}|MaxBot\\MaxBot.pyproj|solutionrelative:MaxBot\\parser.py||{8B382828-6202-11D1-8870-0000F87579D2}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{A9B17282-0C33-4740-A250-D9C6EA60318F}|MaxBot\\MaxBot.pyproj|C:\\Users\\Katya\\source\\repos\\MaxBot\\MaxBot\\requirements.txt||{8B382828-6202-11D1-8870-0000F87579D2}",
-      "RelativeMoniker": "D:0:0:{A9B17282-0C33-4740-A250-D9C6EA60318F}|MaxBot\\MaxBot.pyproj|solutionrelative:MaxBot\\requirements.txt||{8B382828-6202-11D1-8870-0000F87579D2}"
     }
   ],
   "DocumentGroupContainers": [
@@ -22,7 +22,7 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 1,
+          "SelectedChildIndex": 2,
           "Children": [
             {
               "$type": "Bookmark",
@@ -30,7 +30,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 0,
+              "DocumentIndex": 1,
               "Title": "server.py",
               "DocumentMoniker": "C:\\Users\\Katya\\source\\repos\\MaxBot\\MaxBot\\server.py",
               "RelativeDocumentMoniker": "MaxBot\\server.py",
@@ -43,20 +43,20 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 2,
+              "DocumentIndex": 0,
               "Title": "requirements.txt",
               "DocumentMoniker": "C:\\Users\\Katya\\source\\repos\\MaxBot\\MaxBot\\requirements.txt",
               "RelativeDocumentMoniker": "MaxBot\\requirements.txt",
               "ToolTip": "C:\\Users\\Katya\\source\\repos\\MaxBot\\MaxBot\\requirements.txt",
               "RelativeToolTip": "MaxBot\\requirements.txt",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAIAAAAIAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003109|",
               "WhenOpened": "2026-04-02T11:50:57.603Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 2,
               "Title": "parser.py",
               "DocumentMoniker": "C:\\Users\\Katya\\source\\repos\\MaxBot\\MaxBot\\parser.py",
               "RelativeDocumentMoniker": "MaxBot\\parser.py",
@@ -64,8 +64,7 @@
               "RelativeToolTip": "MaxBot\\parser.py",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.002457|",
-              "WhenOpened": "2026-04-02T10:57:38.616Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-04-02T10:57:38.616Z"
             }
           ]
         }
