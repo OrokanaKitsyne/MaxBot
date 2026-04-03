@@ -4,7 +4,8 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>a9b17282-0c33-4740-a250-d9c6ea60318f</ProjectGuid>
     <ProjectHome>.</ProjectHome>
-    <StartupFile>main.py</StartupFile>
+    <StartupFile>
+    </StartupFile>
     <SearchPath>
     </SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
@@ -24,12 +25,6 @@
     <Compile Include="server.py" />
     <Compile Include="requirements.txt" />
     <Compile Include="parser.py" />
-    <Compile Include="bot_logic.py" />
-    <Compile Include="max_api.py" />
-    <Compile Include="main.py" />
-  </ItemGroup>
-  <ItemGroup>
-    <Content Include="ngrok.exe" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
   <!-- Uncomment the CoreCompile target to enable the Build command in
