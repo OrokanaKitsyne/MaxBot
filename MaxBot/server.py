@@ -3,7 +3,7 @@ import requests
 import os
 from bot_logic import BotLogic
 
-TOKEN = "f9LHodD0cOK0Qd9ejbieobIqGs4vgVmvWllZLrdCURamLNdJAfqzw-lRgpKLiAMfm57repfI5jlzJtEH0Dfc"
+TOKEN = "f9LHodD0cOJSnxryoojbcFL5F8ynl9gd27z9_YVCGNC845alHzhM-_DebfOWrQkL1-3NDwdj-DWCG6UxgaeJ"
 BASE_URL = "https://platform-api.max.ru"
 
 app = Flask(__name__)
