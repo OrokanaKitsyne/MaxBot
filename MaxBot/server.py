@@ -26,6 +26,38 @@ def send_message(chat_id, text):
     requests.post(url, headers=headers, json=payload)
 
 
+from flask import Flask, request, jsonify
+import requests
+from bot_logic import BotLogic
+
+TOKEN = "ТВОЙ_ТОКЕН"
+BASE_URL = "https://platform-api.max.ru"
+
+app = Flask(__name__)
+bot = BotLogic()
+
+
+def send_message(chat_id, text):
+    url = f"{BASE_URL}/messages"
+
+    headers = {
+        "Authorization": TOKEN,
+        "Content-Type": "application/json"
+    }
+
+    payload = {
+        "chat_id": chat_id,
+        "text": text
+    }
+
+    try:
+        response = requests.post(url, headers=headers, json=payload, timeout=15)
+        print("SEND STATUS:", response.status_code)
+        print("SEND RESPONSE:", response.text)
+    except Exception as e:
+        print("SEND ERROR:", str(e))
+
+
 @app.route("/")
 def home():
     return "Bot is running", 200
@@ -33,7 +65,7 @@ def home():
 
 @app.route("/webhook", methods=["POST"])
 def webhook():
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
 
     print("UPDATE:", data)
 
