@@ -10,26 +10,7 @@ app = Flask(__name__)
 bot = BotLogic()
 
 
-def get_start_button():
-    return [
-        {
-            "type": "inline_keyboard",
-            "payload": {
-                "buttons": [
-                    [
-                        {
-                            "type": "message",
-                            "text": "Начать разговор",
-                            "message": "/start"
-                        }
-                    ]
-                ]
-            }
-        }
-    ]
-
-
-def send_message(chat_id, text, attachments=None):
+def send_message(chat_id, text):
     url = f"{BASE_URL}/messages?chat_id={chat_id}"
 
     headers = {
@@ -40,9 +21,6 @@ def send_message(chat_id, text, attachments=None):
     payload = {
         "text": text
     }
-
-    if attachments:
-        payload["attachments"] = attachments
 
     try:
         response = requests.post(url, headers=headers, json=payload, timeout=15)
@@ -62,7 +40,22 @@ def webhook():
     data = request.get_json(silent=True) or {}
     print("UPDATE:", data, flush=True)
 
-    if data.get("update_type") == "message_created":
+    update_type = data.get("update_type")
+
+    if update_type == "bot_started":
+        chat_id = data.get("chat_id")
+        payload = data.get("payload")
+
+        print("BOT STARTED CHAT ID:", chat_id, flush=True)
+        print("BOT STARTED PAYLOAD:", payload, flush=True)
+
+        if chat_id:
+            send_message(
+                chat_id,
+                "Привет! Я бот-помощник по алгоритмике.\n\nНапиши тему или задачу, и я помогу."
+            )
+
+    elif update_type == "message_created":
         message = data.get("message", {})
         chat_id = message.get("recipient", {}).get("chat_id")
         text = (message.get("body", {}).get("text") or "").strip()
@@ -72,10 +65,6 @@ def webhook():
 
         if chat_id:
             response_text = bot.get_response(text)
-
-            if text == "/start":
-                send_message(chat_id, response_text, attachments=get_start_button())
-            else:
-                send_message(chat_id, response_text)
+            send_message(chat_id, response_text)
 
     return jsonify({"status": "ok"}), 200
