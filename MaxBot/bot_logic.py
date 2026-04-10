@@ -1,37 +1,33 @@
-﻿class BotLogic:
-    def get_response(self, text):
-        text = text.lower()
+from ai_module import AIService
 
-        if text == "/start":
+
+class BotLogic:
+    def __init__(self):
+        self.ai = AIService()
+
+    def get_response(self, text: str) -> str:
+        text = (text or "").strip()
+        lowered = text.lower()
+
+        if lowered == "/start":
             return (
-                "Привет! 👋\n\n"
-                "Я бот Алгоритмики.\n"
-                "Напиши:\n"
-                "- курсы\n"
-                "- контакты"
+                "Привет! Я бот-помощник по алгоритмике.\n\n"
+                "Я могу:\n"
+                "- объяснять темы по алгоритмам;\n"
+                "- помогать с задачами;\n"
+                "- отвечать на учебные вопросы.\n\n"
+                "Просто напиши свой вопрос."
             )
 
-        elif text == "курсы":
+        if lowered == "контакты":
+            return "Контакты: example@mail.com"
+
+        if lowered == "помощь":
             return (
-                "Доступные направления:\n"
-                "- Python\n"
-                "- Веб\n"
-                "- Unity\n\n"
-                "Напиши название курса"
+                "Напиши вопрос по алгоритмам, например:\n"
+                "- что такое бинарный поиск\n"
+                "- объясни графы\n"
+                "- как работает сортировка слиянием"
             )
 
-        elif text == "контакты":
-            return (
-                "Контакты:\n"
-                "+7 (920) 069-02-00\n"
-                "nn@algoritmika.org"
-            )
-
-        elif "python" in text:
-            return "Курс Python 🚀\nhttps://nn.algoritmika.org"
-
-        elif "веб" in text:
-            return "Курс веб-разработки 🌐\nhttps://nn.algoritmika.org"
-
-        else:
-            return "Я пока понимаю: /start, курсы, контакты"
+        return self.ai.ask(text)
