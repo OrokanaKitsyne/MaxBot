@@ -10,7 +10,7 @@ app = Flask(__name__)
 bot = BotLogic()
 
 def send_message(chat_id, text):
-    url = f"{BASE_URL}/messages"
+    url = f"{BASE_URL}/messages?chat_id={chat_id}"
 
     headers = {
         "Authorization": TOKEN,
@@ -18,16 +18,15 @@ def send_message(chat_id, text):
     }
 
     payload = {
-        "chat_id": chat_id,
         "text": text
     }
 
     try:
         response = requests.post(url, headers=headers, json=payload, timeout=15)
-        print("SEND STATUS:", response.status_code)
-        print("SEND RESPONSE:", response.text)
+        print("SEND STATUS:", response.status_code, flush=True)
+        print("SEND RESPONSE:", response.text, flush=True)
     except Exception as e:
-        print("SEND ERROR:", str(e))
+        print("SEND ERROR:", str(e), flush=True)
 
 
 @app.route("/")
