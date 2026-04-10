@@ -39,12 +39,15 @@ def home():
 def webhook():
     data = request.get_json(silent=True) or {}
 
-    print("UPDATE:", data)
+    print("UPDATE:", data, flush=True)
 
     if data.get("update_type") == "message_created":
         message = data.get("message", {})
-        chat_id = message.get("chat_id")
+        chat_id = message.get("recipient", {}).get("chat_id")
         text = message.get("body", {}).get("text", "")
+
+        print("CHAT ID:", chat_id, flush=True)
+        print("TEXT:", text, flush=True)
 
         if chat_id:
             response = bot.get_response(text)
