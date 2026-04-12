@@ -1,73 +1,67 @@
-from ollamafreeapi import OllamaFreeAPI
-from knowledge_base import WebsiteKnowledgeBase
+import os
+from groq import Groq
 
 
 class AIService:
     def __init__(self):
-        self.client = OllamaFreeAPI()
-        self.model = "deepseek-r1:latest"
+        self.api_key = os.getenv("GROQ_API_KEY", "").strip()
+        self.client = Groq(api_key=self.api_key)
 
-        self.kb = WebsiteKnowledgeBase()
-        self.kb.load()
+        # Быстрая и дешёвая модель для чата
+        self.model = "llama-3.1-8b-instant"
 
-    def ask(self, user_question: str) -> str:
+        # Простой кэш, чтобы одинаковые вопросы не гонять в API повторно
+        self.cache = {}
+
+    def ask(self, user_question: str, context: str = "") -> str:
         user_question = (user_question or "").strip()
 
         if not user_question:
             return "Пожалуйста, напишите вопрос."
 
-        found_docs = self.kb.search(user_question, top_k=3)
+        if not self.api_key:
+            return "Не настроен GROQ_API_KEY."
 
-        if found_docs:
-            context_blocks = []
-            sources = []
+        cache_key = f"{user_question}|{context}".lower()
+        if cache_key in self.cache:
+            return self.cache[cache_key]
 
-            for i, doc in enumerate(found_docs, start=1):
-                context_blocks.append(f"[Фрагмент {i}]\n{doc['text']}")
-                sources.append(doc["url"])
+        system_prompt = (
+            "Ты помощник по курсам и услугам школы. "
+            "Отвечай только на русском языке. "
+            "Отвечай кратко, понятно и по делу. "
+            "Если в предоставленном контексте нет точного ответа, так и скажи."
+        )
 
-            context_text = "\n\n".join(context_blocks)
-            sources_text = "\n".join(sorted(set(sources)))
-
-            prompt = f"""
-Ты — помощник по курсам и услугам.
-Отвечай только на русском языке.
-Отвечай только на основе контекста ниже.
-Если в контексте нет точного ответа, честно скажи: "Я не нашёл точной информации на сайте".
-
-Контекст:
-{context_text}
-
-Вопрос пользователя:
-{user_question}
-
-В конце кратко добавь:
-Источники:
-{sources_text}
-"""
-        else:
-            prompt = f"""
-Ты — помощник по курсам и услугам.
-Отвечай только на русском языке.
-Если информации нет, честно скажи:
-"Я не нашёл точной информации на сайте".
-
-Вопрос пользователя:
-{user_question}
-"""
-
-        try:
-            response = self.client.chat(
-                model=self.model,
-                prompt=prompt,
-                temperature=0.2
+        user_content = user_question
+        if context:
+            user_content = (
+                f"Контекст с сайта:\n{context}\n\n"
+                f"Вопрос пользователя:\n{user_question}"
             )
 
-            if not response:
-                return "Не удалось получить ответ от ИИ."
+        try:
+            chat_completion = self.client.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_content},
+                ],
+                temperature=0.2,
+                max_completion_tokens=500,
+            )
 
-            return str(response).strip()
+            answer = (
+                chat_completion.choices[0].message.content.strip()
+                if chat_completion.choices
+                and chat_completion.choices[0].message
+                and chat_completion.choices[0].message.content
+                else "Не удалось получить ответ от ИИ."
+            )
+
+            self.cache[cache_key] = answer
+            return answer
 
         except Exception as e:
-            print("AI ERROR:", str(e), flush=True)
-            return "Ошибка ИИ сервиса."
+            print("GROQ ERROR:", str(e), flush=True)
+            return "Ошибка при обращении к ИИ."
