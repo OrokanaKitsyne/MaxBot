@@ -42,8 +42,9 @@ def get_main_keyboard():
             }
         }
     ]
-    
-def send_message(chat_id, text):
+
+
+def send_message(chat_id, text, attachments=None):
     url = f"{BASE_URL}/messages?chat_id={chat_id}"
 
     headers = {
@@ -55,8 +56,11 @@ def send_message(chat_id, text):
         "text": text
     }
 
+    if attachments:
+        payload["attachments"] = attachments
+
     try:
-        response = requests.post(url, headers=headers, json=payload, timeout=15)
+        response = requests.post(url, headers=headers, json=payload, timeout=20)
         print("SEND STATUS:", response.status_code, flush=True)
         print("SEND RESPONSE:", response.text, flush=True)
     except Exception as e:
@@ -73,31 +77,35 @@ def webhook():
     data = request.get_json(silent=True) or {}
     print("UPDATE:", data, flush=True)
 
-    update_type = data.get("update_type")
+    try:
+        update_type = data.get("update_type")
 
-    if update_type == "bot_started":
-        chat_id = data.get("chat_id")
-        payload = data.get("payload")
+        if update_type == "bot_started":
+            chat_id = data.get("chat_id")
 
-        print("BOT STARTED CHAT ID:", chat_id, flush=True)
-        print("BOT STARTED PAYLOAD:", payload, flush=True)
+            print("BOT STARTED CHAT ID:", chat_id, flush=True)
 
-        if chat_id:
-            send_message(
-                chat_id,
-                "Привет! Я бот-помощник по алгоритмике.\n\nНапиши тему или задачу, и я помогу."
-            )
+            if chat_id:
+                response_text = bot.get_response("/start")
+                send_message(chat_id, response_text, attachments=get_main_keyboard())
 
-    elif update_type == "message_created":
-        message = data.get("message", {})
-        chat_id = message.get("recipient", {}).get("chat_id")
-        text = (message.get("body", {}).get("text") or "").strip()
+        elif update_type == "message_created":
+            message = data.get("message", {})
+            chat_id = message.get("recipient", {}).get("chat_id")
+            text = (message.get("body", {}).get("text") or "").strip()
 
-        print("CHAT ID:", chat_id, flush=True)
-        print("TEXT:", text, flush=True)
+            print("CHAT ID:", chat_id, flush=True)
+            print("TEXT:", text, flush=True)
 
-        if chat_id:
-            response_text = bot.get_response(text)
-            send_message(chat_id, response_text)
+            if chat_id:
+                response_text = bot.get_response(text)
+                send_message(chat_id, response_text, attachments=get_main_keyboard())
+
+    except Exception as e:
+        print("WEBHOOK ERROR:", str(e), flush=True)
 
     return jsonify({"status": "ok"}), 200
+
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=10000)
