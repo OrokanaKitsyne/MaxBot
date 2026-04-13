@@ -9,9 +9,7 @@ class LocalKnowledgeBase:
         self.path = Path(path)
 
         if not self.path.exists():
-            raise FileNotFoundError(
-                f"Файл базы знаний не найден: {self.path}"
-            )
+            raise FileNotFoundError(f"Файл базы знаний не найден: {self.path}")
 
         with self.path.open("r", encoding="utf-8") as f:
             self.documents: List[Dict[str, Any]] = json.load(f)
@@ -72,24 +70,19 @@ class LocalKnowledgeBase:
 
         score = 0
 
-        # Совпадения по токенам
         overlap = query_tokens & searchable_tokens
         score += len(overlap) * 3
 
-        # Бонус за прямое вхождение запроса
         if query_norm and query_norm in searchable_norm:
             score += 15
 
-        # Бонус за совпадение в заголовке
         title_norm = self._normalize_text(doc.get("title", ""))
         if query_norm and query_norm in title_norm:
             score += 20
 
-        # Бонус за частичное совпадение токенов в title
         title_tokens = self._tokenize(doc.get("title", ""))
         score += len(query_tokens & title_tokens) * 5
 
-        # Бонус для course_page, если пользователь спрашивает про конкретику
         if doc.get("type") == "course_page":
             score += 2
 
@@ -108,7 +101,6 @@ class LocalKnowledgeBase:
                 scored.append((score, doc))
 
         scored.sort(key=lambda x: x[0], reverse=True)
-
         return [doc for _, doc in scored[:top_k]]
 
     def get_context_for_query(self, query: str, top_k: int = 3, max_chars: int = 4000) -> str:
@@ -146,75 +138,3 @@ class LocalKnowledgeBase:
             total_len += len(block)
 
         return "\n\n".join(context_parts).strip()
-
-    def get_index_courses(self) -> List[Dict[str, Any]]:
-        if not self.index_record:
-            return []
-
-        courses = self.index_record.get("courses", [])
-        if not isinstance(courses, list):
-            return []
-
-        unique = []
-        seen = set()
-
-        for course in courses:
-            key = (
-                self._normalize_text(course.get("title", "")),
-                self._normalize_text(course.get("url", "")),
-            )
-
-            if key in seen:
-                continue
-
-            seen.add(key)
-            unique.append(course)
-
-        return unique
-
-    def get_course_names(self) -> List[str]:
-        names = []
-
-        for course in self.get_index_courses():
-            title = course.get("title", "").strip()
-            if title:
-                names.append(title)
-
-        for doc in self.documents:
-            if doc.get("type") == "course_page":
-                title = doc.get("title", "").strip()
-                if title:
-                    names.append(title)
-
-        names = sorted(set(names))
-        return names
-
-    def get_page_by_slug(self, slug: str) -> Dict[str, Any] | None:
-        slug = self._normalize_text(slug)
-
-        for doc in self.documents:
-            if self._normalize_text(doc.get("slug", "")) == slug:
-                return doc
-
-        return None
-
-    def get_page_by_source_file(self, source_file: str) -> Dict[str, Any] | None:
-        source_file = self._normalize_text(source_file)
-
-        for doc in self.documents:
-            if self._normalize_text(doc.get("source_file", "")) == source_file:
-                return doc
-
-        return None
-
-    def stats(self) -> Dict[str, Any]:
-        index_count = sum(1 for d in self.documents if d.get("type") == "index")
-        course_page_count = sum(1 for d in self.documents if d.get("type") == "course_page")
-
-        return {
-            "total_documents": len(self.documents),
-            "index_pages": index_count,
-            "course_pages": course_page_count,
-            "has_index": self.index_record is not None,
-            "index_courses_count": len(self.get_index_courses()),
-        }
