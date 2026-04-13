@@ -1,14 +1,16 @@
-
+import os
 from flask import Flask, request, jsonify
 import requests
 from bot_logic import BotLogic
 
-TOKEN = "f9LHodD0cOJSnxryoojbcFL5F8ynl9gd27z9_YVCGNC845alHzhM-_DebfOWrQkL1-3NDwdj-DWCG6UxgaeJ"
+TOKEN = os.getenv("MAX_BOT_TOKEN", "").strip()
 BASE_URL = "https://platform-api.max.ru"
+
+if not TOKEN:
+    raise ValueError("Не задана переменная окружения MAX_BOT_TOKEN")
 
 app = Flask(__name__)
 bot = BotLogic()
-
 
 def send_message(chat_id, text):
     url = f"{BASE_URL}/messages?chat_id={chat_id}"
