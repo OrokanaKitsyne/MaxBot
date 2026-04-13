@@ -12,6 +12,37 @@ if not TOKEN:
 app = Flask(__name__)
 bot = BotLogic()
 
+
+def get_main_keyboard():
+    return [
+        {
+            "type": "inline_keyboard",
+            "payload": {
+                "buttons": [
+                    [
+                        {
+                            "type": "message",
+                            "text": "Список курсов",
+                            "message": "список курсов"
+                        },
+                        {
+                            "type": "message",
+                            "text": "Контакты",
+                            "message": "контакты"
+                        }
+                    ],
+                    [
+                        {
+                            "type": "message",
+                            "text": "Помощь",
+                            "message": "помощь"
+                        }
+                    ]
+                ]
+            }
+        }
+    ]
+    
 def send_message(chat_id, text):
     url = f"{BASE_URL}/messages?chat_id={chat_id}"
 
