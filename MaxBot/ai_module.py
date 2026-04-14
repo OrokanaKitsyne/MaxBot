@@ -1,6 +1,7 @@
 import os
 from groq import Groq
 from knowledge_base import LocalKnowledgeBase
+from knowledge import LocalKnowledge
 
 
 class AIService:
@@ -11,7 +12,11 @@ class AIService:
 
         self.client = Groq(api_key=api_key)
         self.model = "llama-3.1-8b-instant"
+
+        # Два источника знаний
         self.kb = LocalKnowledgeBase()
+        self.kl = LocalKnowledge()
+
         self.cache = {}
 
     def get_fallback_text(self) -> str:
@@ -32,7 +37,27 @@ class AIService:
         if cache_key in self.cache:
             return self.cache[cache_key]
 
-        context = self.kb.get_context_for_query(user_question, top_k=3, max_chars=3500)
+        # Получаем контекст из обоих файлов
+        context_kb = self.kb.get_context_for_query(
+            user_question,
+            top_k=3,
+            max_chars=2000
+        )
+
+        context_kl = self.kl.get_context_for_query(
+            user_question,
+            top_k=3,
+            max_chars=2000
+        )
+
+        # Объединяем контексты
+        parts = []
+        if context_kb:
+            parts.append("Источник 1:\n" + context_kb)
+        if context_kl:
+            parts.append("Источник 2:\n" + context_kl)
+
+        context = "\n\n".join(parts)
 
         if not context:
             return self.get_fallback_text()
