@@ -3,7 +3,7 @@ import os
 import tempfile
 import unittest
 
-from knowledge_base import LocalKnowledgeBase
+from MaxBot.knowledge_base import LocalKnowledgeBase
 
 
 class TestLocalKnowledgeBase(unittest.TestCase):
