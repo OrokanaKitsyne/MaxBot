@@ -63,7 +63,7 @@ class TestLocalKnowledgeBase(unittest.TestCase):
         finally:
             os.remove(path)
 
-    def test_invalid_json_does_not_crash(self):
+    def test_invalid_json_raises_error(self):
         temp = tempfile.NamedTemporaryFile(
             mode="w",
             delete=False,
@@ -74,8 +74,8 @@ class TestLocalKnowledgeBase(unittest.TestCase):
         temp.close()
 
         try:
-            kb = LocalKnowledgeBase(path=temp.name)
-            self.assertEqual(kb.documents, [])
+            with self.assertRaises(json.JSONDecodeError):
+                LocalKnowledgeBase(path=temp.name)
         finally:
             os.remove(temp.name)
 
