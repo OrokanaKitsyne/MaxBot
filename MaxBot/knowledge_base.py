@@ -3,27 +3,38 @@ import re
 from pathlib import Path
 from typing import List, Dict, Any
 
-
 class LocalKnowledgeBase:
-    def __init__(self, path: str = "pages_knowledge.json"):
-        self.path = Path(path)
+    def __init__(self, path="pages_knowledge.json"):
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                self.documents: List[Dict[str, Any]] = json.load(f)
+        except Exception as e:
+            print(f"Ошибка загрузки {path}: {e}")
+            self.documents = []
 
-        if not self.path.exists():
-            raise FileNotFoundError(f"Файл базы знаний не найден: {self.path}")
+    def get_context_for_query(self, query: str, top_k: int = 3, max_chars: int = 3500) -> str:
+        if not self.documents or not query:
+            return ""
 
-        with self.path.open("r", encoding="utf-8") as f:
-            self.documents: List[Dict[str, Any]] = json.load(f)
+        query_lower = query.lower()
+        matches = []
 
-        if not isinstance(self.documents, list):
-            raise ValueError("pages_knowledge.json должен содержать список объектов")
-
-        self.index_record = self._find_index_record()
-
-    def _find_index_record(self) -> Dict[str, Any] | None:
         for doc in self.documents:
-            if doc.get("type") == "index":
-                return doc
-        return None
+            text_parts = []
+
+            if isinstance(doc, dict):
+                for key in ["title", "description", "text", "visible_text_excerpt"]:
+                    value = doc.get(key)
+                    if isinstance(value, str):
+                        text_parts.append(value)
+
+            full_text = " ".join(text_parts)
+
+            if query_lower in full_text.lower():
+                matches.append(full_text)
+
+        result = "\n\n".join(matches[:top_k])
+        return result[:max_chars]
 
     def _normalize_text(self, text: str) -> str:
         text = (text or "").lower().strip()
