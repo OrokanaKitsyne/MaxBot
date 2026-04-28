@@ -44,7 +44,7 @@ class AIService:
         user_question = (user_question or "").strip()
 
         if not user_question:
-            return "Пожалуйста, напишите вопрос."
+            return "Пожалуйста, напишите свой вопрос 🖍"
 
         cache_key = user_question.lower()
         if cache_key in self.cache:
