@@ -9,8 +9,6 @@ class BotLogic:
     def __init__(self):
         self.ai = AIService()
         self.user_states = {}
-
-       
         self.google_script_url = os.getenv("GOOGLE_SCRIPT_URL", "").strip()
 
     def get_start_text(self) -> str:
@@ -42,7 +40,7 @@ class BotLogic:
     def get_contacts_text(self) -> str:
         return (
             "📞 Контакты Алгоритмики:\n\n"
-            "Телефон: +79200690200\n"
+            "Телефон: +7 (920) 069-02-00\n"
             "Email: nn@algoritmika.org\n"
             "🌐 Официальный сайт: https://algoritmika.org/ru"
         )
@@ -59,9 +57,41 @@ class BotLogic:
             "Для записи напишите: Записаться 😊"
         )
 
-    def is_valid_phone(self, phone: str) -> bool:
-        pattern = r"^\+?[0-9\s\-\(\)]{10,20}$"
-        return bool(re.match(pattern, phone))
+    def normalize_phone(self, phone: str) -> str | None:
+    """
+    Принимает варианты:
+    +7 999 123-45-67
+    8 999 123 45 67
+    89326065656
+    79326065656
+    9326065656
+    +79326065656
+
+    Возвращает телефон в формате +7XXXXXXXXXX
+    или None, если номер некорректный.
+    """
+
+    if not phone:
+        return None
+
+    digits = re.sub(r"\D", "", phone)
+
+   
+    if len(digits) == 10:
+        digits = "7" + digits
+
+
+    elif len(digits) == 11:
+        if digits.startswith("8"):
+            digits = "7" + digits[1:]
+        elif digits.startswith("7"):
+            digits = digits
+        else:
+            return None
+    else:
+        return None
+
+    return "+" + digits
 
     def is_valid_email(self, email: str) -> bool:
         pattern = r"^[\w\.-]+@[\w\.-]+\.\w+$"
@@ -118,44 +148,52 @@ class BotLogic:
         data = state["data"]
 
         if step == "name":
-            if len(text) < 2:
-                return "Пожалуйста, напишите имя 😊"
+            if len(text.strip()) < 2:
+                return "Пожалуйста, напишите ваше имя 😊"
 
-            data["name"] = text
+            data["name"] = text.strip()
             state["step"] = "phone"
 
             return (
-                "Спасибо! 😊\n"
-                "Теперь оставьте номер телефона.\n\n"
-                "Например: +7 999 123-45-67 📞"
+                "Спасибо! 😊 Теперь оставьте номер телефона.\n\n"
             )
 
         if step == "phone":
-            if not self.is_valid_phone(text):
+            normalized_phone = self.normalize_phone(text)
+
+            if not normalized_phone:
+                state["step"] = "phone"
+
                 return (
-                    "Похоже, номер телефона введён некорректно 😕\n"
-                    "Пожалуйста, укажите номер в формате:\n"
-                    "+7 999 123-45-67"
+                    "Похоже, номер телефона введён некорректно 😕\n\n"
+                    "Пожалуйста, отправьте номер ещё раз.\n\n"
+                    "Подойдут такие форматы:\n"
+                    "📞 +7 999 123-45-67\n"
+                    "📞 8 999 123 45 67\n"
+                    "📞 79991234567\n"
+                    "📞 9991234567"
                 )
 
-            data["phone"] = text
+            data["phone"] = normalized_phone
             state["step"] = "email"
 
             return (
-                "Отлично! ✅\n"
-                "Теперь укажите электронную почту.\n\n"
+                "Отлично! ✅ Номер сохранён.\n\n"
+                "Теперь укажите электронную почту.\n"
                 "Например: example@mail.ru ✉️"
             )
 
         if step == "email":
             if not self.is_valid_email(text):
+                state["step"] = "email"
+
                 return (
-                    "Похоже, email введён некорректно 😕\n"
+                    "Похоже, email введён некорректно 😕\n\n"
                     "Пожалуйста, укажите почту в формате:\n"
                     "example@mail.ru"
                 )
 
-            data["email"] = text
+            data["email"] = text.strip()
             data["user_id"] = user_id
             data["chat_id"] = user_id
 
@@ -172,7 +210,7 @@ class BotLogic:
             return (
                 "Заявку не удалось отправить автоматически 😕\n\n"
                 "Пожалуйста, свяжитесь с нами напрямую:\n"
-                "📞 Телефон: +79200690200\n"
+                "📞 Телефон: +7 (920) 069-02-00\n"
                 "✉️ Email: nn@algoritmika.org"
             )
 
