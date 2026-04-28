@@ -10,6 +10,9 @@ if not TOKEN:
     raise ValueError("Не задана переменная окружения MAX_BOT_TOKEN")
 
 app = Flask(__name__)
+@app.route("/health")
+def health():
+    return "OK", 200
 bot = BotLogic()
 
 
