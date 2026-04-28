@@ -229,6 +229,12 @@ class BotLogic:
         if user_id in self.user_states:
             return self.process_application_step(user_id, text)
 
+        if self.is_valid_email(text):
+            return (
+                "Похоже, вы отправили email ✉️\n\n"
+                "Чтобы оставить заявку, сначала нажмите или напишите: Записаться 😊"
+            )
+
         if lowered == "/start":
             return self.get_start_text()
 
@@ -245,3 +251,4 @@ class BotLogic:
             return self.start_application(user_id)
 
         return self.ai.ask(text)
+    
