@@ -10,7 +10,7 @@ class BotLogic:
         self.ai = AIService()
         self.user_states = {}
 
-        # URL Apps Script лучше хранить в переменной окружения
+       
         self.google_script_url = os.getenv("GOOGLE_SCRIPT_URL", "").strip()
 
     def get_start_text(self) -> str:
