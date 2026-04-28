@@ -58,40 +58,38 @@ class BotLogic:
         )
 
     def normalize_phone(self, phone: str) -> str | None:
-    """
-    Принимает варианты:
-    +7 999 123-45-67
-    8 999 123 45 67
-    89326065656
-    79326065656
-    9326065656
-    +79326065656
+        """
+        Принимает варианты:
+        +7 999 123-45-67
+        8 999 123 45 67
+        89326065656
+        79326065656
+        9326065656
+        +79326065656
 
-    Возвращает телефон в формате +7XXXXXXXXXX
-    или None, если номер некорректный.
-    """
+        Возвращает телефон в формате +7XXXXXXXXXX
+        или None, если номер некорректный.
+        """
 
-    if not phone:
-        return None
+        if not phone:
+            return None
 
-    digits = re.sub(r"\D", "", phone)
+        digits = re.sub(r"\D", "", phone)
 
-   
-    if len(digits) == 10:
-        digits = "7" + digits
+        if len(digits) == 10:
+            digits = "7" + digits
 
-
-    elif len(digits) == 11:
-        if digits.startswith("8"):
-            digits = "7" + digits[1:]
-        elif digits.startswith("7"):
-            digits = digits
+        elif len(digits) == 11:
+            if digits.startswith("8"):
+                digits = "7" + digits[1:]
+            elif digits.startswith("7"):
+                digits = digits
+            else:
+                return None
         else:
             return None
-    else:
-        return None
 
-    return "+" + digits
+        return "+" + digits
 
     def is_valid_email(self, email: str) -> bool:
         pattern = r"^[\w\.-]+@[\w\.-]+\.\w+$"
@@ -110,6 +108,8 @@ class BotLogic:
             "user_id": str(application.get("user_id", "")),
             "chat_id": str(application.get("chat_id", ""))
         }
+
+        print("SENDING APPLICATION:", prepared_application, flush=True)
 
         try:
             response = requests.post(
@@ -155,7 +155,9 @@ class BotLogic:
             state["step"] = "phone"
 
             return (
-                "Спасибо! 😊 Теперь оставьте номер телефона.\n\n"
+                "Спасибо! 😊\n"
+                "Теперь оставьте номер телефона.\n\n"
+                "Например: +7 999 123-45-67 📞"
             )
 
         if step == "phone":
@@ -170,7 +172,8 @@ class BotLogic:
                     "Подойдут такие форматы:\n"
                     "📞 +7 999 123-45-67\n"
                     "📞 8 999 123 45 67\n"
-                    "📞 79991234567\n"
+                    "📞 89326065656\n"
+                    "📞 79326065656\n"
                     "📞 9991234567"
                 )
 
