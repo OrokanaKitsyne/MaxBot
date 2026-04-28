@@ -34,27 +34,72 @@ def home():
     return "Bot is running", 200
 
 
-def send_message(token, chat_id, text, attachments=None):
-    url = f"{BASE_URL}/messages?chat_id={chat_id}"
+def request_max(method, token, path, payload=None, params=None):
+    url = f"{BASE_URL}{path}"
 
     headers = {
         "Authorization": token,
         "Content-Type": "application/json"
     }
 
-    payload = {
-        "text": text
-    }
+    try:
+        response = requests.request(
+            method=method,
+            url=url,
+            headers=headers,
+            json=payload,
+            params=params,
+            timeout=20
+        )
+        print(f"{method} {path} STATUS:", response.status_code, flush=True)
+        print(f"{method} {path} RESPONSE:", response.text, flush=True)
+        return response
+    except Exception as e:
+        print(f"{method} {path} ERROR:", str(e), flush=True)
+        return None
+
+
+def send_message(token, chat_id, text, attachments=None):
+    payload = {"text": text}
 
     if attachments:
         payload["attachments"] = attachments
 
-    try:
-        response = requests.post(url, headers=headers, json=payload, timeout=20)
-        print("SEND STATUS:", response.status_code, flush=True)
-        print("SEND RESPONSE:", response.text, flush=True)
-    except Exception as e:
-        print("SEND ERROR:", str(e), flush=True)
+    return request_max(
+        "POST",
+        token,
+        "/messages",
+        payload=payload,
+        params={"chat_id": chat_id}
+    )
+
+
+def edit_message(token, message_id, text, attachments=None):
+    if not message_id:
+        return None
+
+    payload = {"text": text}
+
+    if attachments is not None:
+        payload["attachments"] = attachments
+
+    return request_max(
+        "PATCH",
+        token,
+        f"/messages/{message_id}",
+        payload=payload
+    )
+
+
+def answer_or_edit(token, chat_id, message_id, text, attachments=None):
+    """Для callback редактирует старое сообщение, иначе отправляет новое."""
+    if message_id:
+        response = edit_message(token, message_id, text, attachments=attachments)
+
+        if response is not None and response.status_code in (200, 201, 202, 204):
+            return response
+
+    return send_message(token, chat_id, text, attachments=attachments)
 
 
 def make_keyboard(buttons):
@@ -68,30 +113,40 @@ def make_keyboard(buttons):
     ]
 
 
+def message_button(text, message):
+    return {
+        "type": "message",
+        "text": text,
+        "message": message
+    }
+
+
+def callback_button(text, payload):
+    return {
+        "type": "callback",
+        "text": text,
+        "payload": payload
+    }
+
+
 def get_main_keyboard():
     return make_keyboard([
         [
-            {"type": "message", "text": "Список курсов", "message": "список курсов"},
-            {"type": "message", "text": "Контакты", "message": "контакты"}
+            message_button("Список курсов", "список курсов"),
+            message_button("Контакты", "контакты")
         ],
         [
-            {"type": "message", "text": "Помощь", "message": "помощь"}
+            message_button("Помощь", "помощь")
         ],
         [
-            {"type": "message", "text": "Записаться", "message": "записаться"}
+            message_button("Записаться", "записаться")
         ]
     ])
 
 
 def get_feedback_start_keyboard():
     return make_keyboard([
-        [
-            {
-                "type": "message",
-                "text": "Список курсов",
-                "message": "feedback:course_list"
-            }
-        ]
+        [callback_button("Список курсов", "feedback:course_list")]
     ])
 
 
@@ -100,11 +155,7 @@ def get_courses_keyboard():
 
     for course in feedback_bot.get_courses():
         buttons.append([
-            {
-                "type": "message",
-                "text": course,
-                "message": f"feedback:course:{course}"
-            }
+            callback_button(course, f"feedback:course:{course}")
         ])
 
     return make_keyboard(buttons)
@@ -115,33 +166,96 @@ def get_lessons_keyboard(course_name):
 
     for lesson_num in feedback_bot.get_lessons(course_name):
         buttons.append([
-            {
-                "type": "message",
-                "text": f"Урок №{lesson_num}",
-                "message": f"feedback:lesson:{lesson_num}"
-            }
+            callback_button(f"Урок №{lesson_num}", f"feedback:lesson:{lesson_num}")
         ])
+
+    buttons.append([callback_button("← Назад к курсам", "feedback:course_list")])
 
     return make_keyboard(buttons)
 
 
 def get_lesson_type_keyboard():
     return make_keyboard([
-        [
-            {
-                "type": "message",
-                "text": "Онлайн / индивид",
-                "message": "feedback:type:online"
-            }
-        ],
-        [
-            {
-                "type": "message",
-                "text": "Офлайн",
-                "message": "feedback:type:offline"
-            }
-        ]
+        [callback_button("Онлайн / индивид", "feedback:type:online")],
+        [callback_button("Офлайн", "feedback:type:offline")],
+        [callback_button("← Назад к курсам", "feedback:course_list")]
     ])
+
+
+def get_from_paths(data, paths):
+    for path in paths:
+        current = data
+        ok = True
+
+        for key in path:
+            if isinstance(current, dict) and key in current:
+                current = current[key]
+            else:
+                ok = False
+                break
+
+        if ok and current is not None:
+            return current
+
+    return None
+
+
+def extract_feedback_event(data):
+    """Достаёт chat_id, user_id, text/payload и message_id из разных вариантов webhook MAX."""
+    update_type = data.get("update_type")
+
+    chat_id = get_from_paths(data, [
+        ["chat_id"],
+        ["message", "recipient", "chat_id"],
+        ["message", "chat_id"],
+        ["callback", "chat_id"],
+        ["message_callback", "chat_id"]
+    ])
+
+    user_id = get_from_paths(data, [
+        ["user", "user_id"],
+        ["message", "sender", "user_id"],
+        ["sender", "user_id"],
+        ["callback", "user", "user_id"],
+        ["message_callback", "user", "user_id"]
+    ])
+
+    text = get_from_paths(data, [
+        ["message", "body", "text"],
+        ["message", "text"]
+    ])
+
+    payload = get_from_paths(data, [
+        ["callback", "payload"],
+        ["message_callback", "payload"],
+        ["payload"]
+    ])
+
+    message_id = get_from_paths(data, [
+        ["message", "body", "mid"],
+        ["message", "body", "message_id"],
+        ["message", "id"],
+        ["message", "message_id"],
+        ["callback", "message", "body", "mid"],
+        ["callback", "message", "body", "message_id"],
+        ["callback", "message", "id"],
+        ["callback", "message_id"],
+        ["message_callback", "message", "body", "mid"],
+        ["message_callback", "message", "body", "message_id"],
+        ["message_callback", "message", "id"],
+        ["message_callback", "message_id"],
+        ["message_id"]
+    ])
+
+    command = payload or text or ""
+
+    return {
+        "update_type": update_type,
+        "chat_id": chat_id,
+        "user_id": str(user_id) if user_id is not None else None,
+        "command": str(command).strip(),
+        "message_id": message_id
+    }
 
 
 @app.route("/webhook", methods=["POST"])
@@ -181,13 +295,17 @@ def feedback_webhook():
     data = request.get_json(silent=True) or {}
     print("FEEDBACK UPDATE:", data, flush=True)
 
+    chat_id = None
+
     try:
-        update_type = data.get("update_type")
+        event = extract_feedback_event(data)
+        update_type = event["update_type"]
+        chat_id = event["chat_id"]
+        user_id = event["user_id"] or str(chat_id)
+        command = event["command"]
+        message_id = event["message_id"]
 
         if update_type == "bot_started":
-            chat_id = data.get("chat_id")
-            user_id = str(chat_id)
-
             if chat_id:
                 send_message(
                     FEEDBACK_TOKEN,
@@ -196,72 +314,100 @@ def feedback_webhook():
                     attachments=get_feedback_start_keyboard()
                 )
 
-        elif update_type == "message_created":
-            message = data.get("message", {})
-
-            chat_id = message.get("recipient", {}).get("chat_id")
-            user_id = str(message.get("sender", {}).get("user_id"))
-            text = (message.get("body", {}).get("text") or "").strip()
-
+        elif update_type in ("message_callback", "message_created"):
             if not chat_id or not user_id:
                 return jsonify({"status": "ok"}), 200
 
-            if text == "feedback:course_list":
-                send_message(
+            if command in ("feedback:course_list", "список курсов", "/start", "start"):
+                answer_or_edit(
                     FEEDBACK_TOKEN,
                     chat_id,
+                    message_id,
                     "Выберите курс:",
                     attachments=get_courses_keyboard()
                 )
 
-            elif text.startswith("feedback:course:"):
-                course_name = text.replace("feedback:course:", "", 1)
+            elif command.startswith("feedback:course:"):
+                course_name = command.replace("feedback:course:", "", 1)
 
-                feedback_bot.set_course(user_id, course_name)
+                if not feedback_bot.course_exists(course_name):
+                    answer_or_edit(
+                        FEEDBACK_TOKEN,
+                        chat_id,
+                        message_id,
+                        "Курс не найден. Выберите курс из списка:",
+                        attachments=get_courses_keyboard()
+                    )
+                else:
+                    feedback_bot.set_course(user_id, course_name)
 
-                send_message(
-                    FEEDBACK_TOKEN,
-                    chat_id,
-                    f"Курс выбран: {course_name}\nТеперь выберите номер урока:",
-                    attachments=get_lessons_keyboard(course_name)
-                )
+                    answer_or_edit(
+                        FEEDBACK_TOKEN,
+                        chat_id,
+                        message_id,
+                        f"Курс выбран: {course_name}\nТеперь выберите номер урока:",
+                        attachments=get_lessons_keyboard(course_name)
+                    )
 
-            elif text.startswith("feedback:lesson:"):
-                lesson_num = text.replace("feedback:lesson:", "", 1)
+            elif command.startswith("feedback:lesson:"):
+                lesson_num = command.replace("feedback:lesson:", "", 1)
+                state = feedback_bot.get_state(user_id)
+                course_name = state.get("course")
 
-                feedback_bot.set_lesson(user_id, lesson_num)
+                if not course_name:
+                    answer_or_edit(
+                        FEEDBACK_TOKEN,
+                        chat_id,
+                        message_id,
+                        "Сначала выберите курс:",
+                        attachments=get_courses_keyboard()
+                    )
+                elif not feedback_bot.lesson_exists(course_name, lesson_num):
+                    answer_or_edit(
+                        FEEDBACK_TOKEN,
+                        chat_id,
+                        message_id,
+                        "Урок не найден. Выберите урок из списка:",
+                        attachments=get_lessons_keyboard(course_name)
+                    )
+                else:
+                    feedback_bot.set_lesson(user_id, lesson_num)
 
-                send_message(
-                    FEEDBACK_TOKEN,
-                    chat_id,
-                    f"Урок выбран: №{lesson_num}\nТеперь выберите формат занятия:",
-                    attachments=get_lesson_type_keyboard()
-                )
+                    answer_or_edit(
+                        FEEDBACK_TOKEN,
+                        chat_id,
+                        message_id,
+                        f"Курс: {course_name}\nУрок: №{lesson_num}\nТеперь выберите формат занятия:",
+                        attachments=get_lesson_type_keyboard()
+                    )
 
-            elif text == "feedback:type:online":
+            elif command == "feedback:type:online":
                 result = feedback_bot.generate_feedback(user_id, "online")
-                send_message(FEEDBACK_TOKEN, chat_id, result)
+                answer_or_edit(FEEDBACK_TOKEN, chat_id, message_id, result, attachments=[])
 
-            elif text == "feedback:type:offline":
+            elif command == "feedback:type:offline":
                 result = feedback_bot.generate_feedback(user_id, "offline")
-                send_message(FEEDBACK_TOKEN, chat_id, result)
+                answer_or_edit(FEEDBACK_TOKEN, chat_id, message_id, result, attachments=[])
 
             else:
-                send_message(
+                answer_or_edit(
                     FEEDBACK_TOKEN,
                     chat_id,
+                    message_id,
                     "Нажмите кнопку «Список курсов», чтобы начать.",
                     attachments=get_feedback_start_keyboard()
                 )
 
     except Exception as e:
         print("FEEDBACK WEBHOOK ERROR:", str(e), flush=True)
-        send_message(
-            FEEDBACK_TOKEN,
-            chat_id,
-            "Произошла ошибка. Попробуйте начать заново.",
-            attachments=get_feedback_start_keyboard()
-        )
+
+        if chat_id:
+            send_message(
+                FEEDBACK_TOKEN,
+                chat_id,
+                "Произошла ошибка. Попробуйте начать заново.",
+                attachments=get_feedback_start_keyboard()
+            )
 
     return jsonify({"status": "ok"}), 200
 
