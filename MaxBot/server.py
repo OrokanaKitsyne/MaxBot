@@ -62,7 +62,7 @@ def request_max(method, token, path, payload=None, params=None):
 def send_message(token, chat_id, text, attachments=None):
     payload = {"text": text}
 
-    if attachments:
+    if attachments is not None:
         payload["attachments"] = attachments
 
     return request_max(
@@ -75,12 +75,6 @@ def send_message(token, chat_id, text, attachments=None):
 
 
 def answer_callback(token, callback_id, text, attachments=None, notification=None):
-    """
-    Обновляет текущее сообщение после нажатия callback-кнопки.
-
-    В MAX нельзя обновлять callback-сообщение через PATCH /messages/{mid}.
-    Для этого используется POST /answers?callback_id=...
-    """
     if not callback_id:
         return None
 
@@ -104,10 +98,6 @@ def answer_callback(token, callback_id, text, attachments=None, notification=Non
 
 
 def answer_or_send(token, chat_id, callback_id, text, attachments=None):
-    """
-    Если действие пришло от callback-кнопки — обновляет текущее сообщение.
-    Если это обычное сообщение/старт — отправляет новое.
-    """
     if callback_id:
         response = answer_callback(token, callback_id, text, attachments=attachments)
 
@@ -184,7 +174,9 @@ def get_lessons_keyboard(course_name):
             callback_button(f"Урок №{lesson_num}", f"feedback:lesson:{lesson_num}")
         ])
 
-    buttons.append([callback_button("← Назад к курсам", "feedback:course_list")])
+    buttons.append([
+        callback_button("← К курсам", "feedback:course_list")
+    ])
 
     return make_keyboard(buttons)
 
@@ -193,7 +185,17 @@ def get_lesson_type_keyboard():
     return make_keyboard([
         [callback_button("Онлайн / индивид", "feedback:type:online")],
         [callback_button("Офлайн", "feedback:type:offline")],
-        [callback_button("← Назад к курсам", "feedback:course_list")]
+        [callback_button("← К урокам", "feedback:lesson_list")],
+        [callback_button("← К курсам", "feedback:course_list")]
+    ])
+
+
+def get_feedback_result_keyboard():
+    return make_keyboard([
+        [
+            callback_button("← К курсам", "feedback:course_list"),
+            callback_button("← К урокам", "feedback:lesson_list")
+        ]
     ])
 
 
@@ -216,7 +218,6 @@ def get_from_paths(data, paths):
 
 
 def extract_feedback_event(data):
-    """Достаёт chat_id, user_id, text/payload и callback_id из webhook MAX."""
     update_type = data.get("update_type")
 
     chat_id = get_from_paths(data, [
@@ -332,6 +333,27 @@ def feedback_webhook():
                     attachments=get_courses_keyboard()
                 )
 
+            elif command == "feedback:lesson_list":
+                state = feedback_bot.get_state(user_id)
+                course_name = state.get("course")
+
+                if not course_name:
+                    answer_or_send(
+                        FEEDBACK_TOKEN,
+                        chat_id,
+                        callback_id,
+                        "Сначала выберите курс:",
+                        attachments=get_courses_keyboard()
+                    )
+                else:
+                    answer_or_send(
+                        FEEDBACK_TOKEN,
+                        chat_id,
+                        callback_id,
+                        f"Курс: {course_name}\nВыберите номер урока:",
+                        attachments=get_lessons_keyboard(course_name)
+                    )
+
             elif command.startswith("feedback:course:"):
                 course_name = command.replace("feedback:course:", "", 1)
 
@@ -388,11 +410,25 @@ def feedback_webhook():
 
             elif command == "feedback:type:online":
                 result = feedback_bot.generate_feedback(user_id, "online")
-                answer_or_send(FEEDBACK_TOKEN, chat_id, callback_id, result, attachments=[])
+
+                answer_or_send(
+                    FEEDBACK_TOKEN,
+                    chat_id,
+                    callback_id,
+                    result,
+                    attachments=get_feedback_result_keyboard()
+                )
 
             elif command == "feedback:type:offline":
                 result = feedback_bot.generate_feedback(user_id, "offline")
-                answer_or_send(FEEDBACK_TOKEN, chat_id, callback_id, result, attachments=[])
+
+                answer_or_send(
+                    FEEDBACK_TOKEN,
+                    chat_id,
+                    callback_id,
+                    result,
+                    attachments=get_feedback_result_keyboard()
+                )
 
             else:
                 answer_or_send(
