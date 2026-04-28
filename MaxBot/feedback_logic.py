@@ -24,7 +24,11 @@ class FeedbackBotLogic:
             return []
 
         lessons = self.data["courses"][course_name].get("lessons", {})
-        return sorted(lessons.keys(), key=lambda value: int(value) if str(value).isdigit() else str(value))
+
+        return sorted(
+            lessons.keys(),
+            key=lambda value: int(value) if str(value).isdigit() else str(value)
+        )
 
     def lesson_exists(self, course_name, lesson_num):
         if not self.course_exists(course_name):
@@ -52,6 +56,7 @@ class FeedbackBotLogic:
         today = datetime.now().strftime("%d.%m.%Y")
 
         state = self.get_state(user_id)
+
         if not state:
             return "Ошибка: сначала выберите курс и урок."
 
