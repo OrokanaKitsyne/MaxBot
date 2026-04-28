@@ -52,7 +52,7 @@ class FeedbackBotLogic:
 
         self.user_state[user_id]["lesson"] = str(lesson_num)
         
-    def get_greeting():
+    def get_greeting(self):
         hour = datetime.now().hour
 
         if 5 <= hour < 12:
@@ -64,7 +64,7 @@ class FeedbackBotLogic:
             
     def generate_feedback(self, user_id, lesson_type):
         today = datetime.now().strftime("%d.%m.%Y")
-        greeting = get_greeting()
+        greeting = self.get_greeting()
         state = self.get_state(user_id)
 
         if not state:
