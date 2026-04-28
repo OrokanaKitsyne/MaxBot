@@ -74,27 +74,42 @@ def send_message(token, chat_id, text, attachments=None):
     )
 
 
-def edit_message(token, message_id, text, attachments=None):
-    if not message_id:
+def answer_callback(token, callback_id, text, attachments=None, notification=None):
+    """
+    Обновляет текущее сообщение после нажатия callback-кнопки.
+
+    В MAX нельзя обновлять callback-сообщение через PATCH /messages/{mid}.
+    Для этого используется POST /answers?callback_id=...
+    """
+    if not callback_id:
         return None
 
-    payload = {"text": text}
+    message = {"text": text}
 
     if attachments is not None:
-        payload["attachments"] = attachments
+        message["attachments"] = attachments
+
+    payload = {"message": message}
+
+    if notification:
+        payload["notification"] = notification
 
     return request_max(
-        "PATCH",
+        "POST",
         token,
-        f"/messages/{message_id}",
-        payload=payload
+        "/answers",
+        payload=payload,
+        params={"callback_id": callback_id}
     )
 
 
-def answer_or_edit(token, chat_id, message_id, text, attachments=None):
-    """Для callback редактирует старое сообщение, иначе отправляет новое."""
-    if message_id:
-        response = edit_message(token, message_id, text, attachments=attachments)
+def answer_or_send(token, chat_id, callback_id, text, attachments=None):
+    """
+    Если действие пришло от callback-кнопки — обновляет текущее сообщение.
+    Если это обычное сообщение/старт — отправляет новое.
+    """
+    if callback_id:
+        response = answer_callback(token, callback_id, text, attachments=attachments)
 
         if response is not None and response.status_code in (200, 201, 202, 204):
             return response
@@ -201,7 +216,7 @@ def get_from_paths(data, paths):
 
 
 def extract_feedback_event(data):
-    """Достаёт chat_id, user_id, text/payload и message_id из разных вариантов webhook MAX."""
+    """Достаёт chat_id, user_id, text/payload и callback_id из webhook MAX."""
     update_type = data.get("update_type")
 
     chat_id = get_from_paths(data, [
@@ -231,20 +246,10 @@ def extract_feedback_event(data):
         ["payload"]
     ])
 
-    message_id = get_from_paths(data, [
-        ["message", "body", "mid"],
-        ["message", "body", "message_id"],
-        ["message", "id"],
-        ["message", "message_id"],
-        ["callback", "message", "body", "mid"],
-        ["callback", "message", "body", "message_id"],
-        ["callback", "message", "id"],
-        ["callback", "message_id"],
-        ["message_callback", "message", "body", "mid"],
-        ["message_callback", "message", "body", "message_id"],
-        ["message_callback", "message", "id"],
-        ["message_callback", "message_id"],
-        ["message_id"]
+    callback_id = get_from_paths(data, [
+        ["callback", "callback_id"],
+        ["message_callback", "callback_id"],
+        ["callback_id"]
     ])
 
     command = payload or text or ""
@@ -254,7 +259,7 @@ def extract_feedback_event(data):
         "chat_id": chat_id,
         "user_id": str(user_id) if user_id is not None else None,
         "command": str(command).strip(),
-        "message_id": message_id
+        "callback_id": callback_id
     }
 
 
@@ -303,7 +308,7 @@ def feedback_webhook():
         chat_id = event["chat_id"]
         user_id = event["user_id"] or str(chat_id)
         command = event["command"]
-        message_id = event["message_id"]
+        callback_id = event["callback_id"]
 
         if update_type == "bot_started":
             if chat_id:
@@ -319,10 +324,10 @@ def feedback_webhook():
                 return jsonify({"status": "ok"}), 200
 
             if command in ("feedback:course_list", "список курсов", "/start", "start"):
-                answer_or_edit(
+                answer_or_send(
                     FEEDBACK_TOKEN,
                     chat_id,
-                    message_id,
+                    callback_id,
                     "Выберите курс:",
                     attachments=get_courses_keyboard()
                 )
@@ -331,20 +336,20 @@ def feedback_webhook():
                 course_name = command.replace("feedback:course:", "", 1)
 
                 if not feedback_bot.course_exists(course_name):
-                    answer_or_edit(
+                    answer_or_send(
                         FEEDBACK_TOKEN,
                         chat_id,
-                        message_id,
+                        callback_id,
                         "Курс не найден. Выберите курс из списка:",
                         attachments=get_courses_keyboard()
                     )
                 else:
                     feedback_bot.set_course(user_id, course_name)
 
-                    answer_or_edit(
+                    answer_or_send(
                         FEEDBACK_TOKEN,
                         chat_id,
-                        message_id,
+                        callback_id,
                         f"Курс выбран: {course_name}\nТеперь выберите номер урока:",
                         attachments=get_lessons_keyboard(course_name)
                     )
@@ -355,45 +360,45 @@ def feedback_webhook():
                 course_name = state.get("course")
 
                 if not course_name:
-                    answer_or_edit(
+                    answer_or_send(
                         FEEDBACK_TOKEN,
                         chat_id,
-                        message_id,
+                        callback_id,
                         "Сначала выберите курс:",
                         attachments=get_courses_keyboard()
                     )
                 elif not feedback_bot.lesson_exists(course_name, lesson_num):
-                    answer_or_edit(
+                    answer_or_send(
                         FEEDBACK_TOKEN,
                         chat_id,
-                        message_id,
+                        callback_id,
                         "Урок не найден. Выберите урок из списка:",
                         attachments=get_lessons_keyboard(course_name)
                     )
                 else:
                     feedback_bot.set_lesson(user_id, lesson_num)
 
-                    answer_or_edit(
+                    answer_or_send(
                         FEEDBACK_TOKEN,
                         chat_id,
-                        message_id,
+                        callback_id,
                         f"Курс: {course_name}\nУрок: №{lesson_num}\nТеперь выберите формат занятия:",
                         attachments=get_lesson_type_keyboard()
                     )
 
             elif command == "feedback:type:online":
                 result = feedback_bot.generate_feedback(user_id, "online")
-                answer_or_edit(FEEDBACK_TOKEN, chat_id, message_id, result, attachments=[])
+                answer_or_send(FEEDBACK_TOKEN, chat_id, callback_id, result, attachments=[])
 
             elif command == "feedback:type:offline":
                 result = feedback_bot.generate_feedback(user_id, "offline")
-                answer_or_edit(FEEDBACK_TOKEN, chat_id, message_id, result, attachments=[])
+                answer_or_send(FEEDBACK_TOKEN, chat_id, callback_id, result, attachments=[])
 
             else:
-                answer_or_edit(
+                answer_or_send(
                     FEEDBACK_TOKEN,
                     chat_id,
-                    message_id,
+                    callback_id,
                     "Нажмите кнопку «Список курсов», чтобы начать.",
                     attachments=get_feedback_start_keyboard()
                 )
