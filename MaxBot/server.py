@@ -37,6 +37,13 @@ def get_main_keyboard():
                             "text": "Помощь",
                             "message": "помощь"
                         }
+                    ],
+                    [
+                        {
+                            "type": "message",
+                            "text": "Записаться",
+                            "message": "записаться"
+                        }
                     ]
                 ]
             }
@@ -86,19 +93,22 @@ def webhook():
             print("BOT STARTED CHAT ID:", chat_id, flush=True)
 
             if chat_id:
-                response_text = bot.get_response("/start")
+                response_text = bot.get_response("/start", user_id=str(chat_id))
                 send_message(chat_id, response_text, attachments=get_main_keyboard())
 
         elif update_type == "message_created":
             message = data.get("message", {})
+
             chat_id = message.get("recipient", {}).get("chat_id")
+            user_id = message.get("sender", {}).get("user_id")
             text = (message.get("body", {}).get("text") or "").strip()
 
             print("CHAT ID:", chat_id, flush=True)
+            print("USER ID:", user_id, flush=True)
             print("TEXT:", text, flush=True)
 
-            if chat_id:
-                response_text = bot.get_response(text)
+            if chat_id and user_id:
+                response_text = bot.get_response(text, user_id=str(user_id))
                 send_message(chat_id, response_text, attachments=get_main_keyboard())
 
     except Exception as e:
