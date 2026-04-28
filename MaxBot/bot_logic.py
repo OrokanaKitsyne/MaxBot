@@ -1,9 +1,16 @@
+import os
+import re
+import requests
 from ai_module import AIService
 
 
 class BotLogic:
     def __init__(self):
         self.ai = AIService()
+        self.user_states = {}
+
+        # URL Apps Script лучше хранить в переменной окружения
+        self.google_script_url = os.getenv("GOOGLE_SCRIPT_URL", "").strip()
 
     def get_start_text(self) -> str:
         return (
@@ -26,7 +33,8 @@ class BotLogic:
             "15-18 лет — Веб-разработка\n\n"
             "Факультет математики:\n"
             "6-8 лет — Математика+\n"
-            "9-13 лет — Математика+"
+            "9-13 лет — Математика+\n\n"
+            "Если хотите записаться, напишите: Записаться"
         )
 
     def get_contacts_text(self) -> str:
@@ -41,15 +49,126 @@ class BotLogic:
             "Я помогу подобрать подходящий курс для ребёнка 👩‍💻\n\n"
             "Вы можете:\n"
             "• посмотреть список курсов\n"
-            "• узнать подробности обучения\n"
-            "• задать любой вопрос\n"
-            "• получить контакты для записи\n\n"
-            "Напишите, что вас интересует, и я подскажу 🙂"
+            "• узнать места обучения\n"
+            "• задать вопрос о курсах\n"
+            "• оставить заявку на запись\n"
+            "• получить контакты\n\n"
+            "Для записи напишите: Записаться"
         )
 
-    def get_response(self, text: str) -> str:
+    def is_valid_phone(self, phone: str) -> bool:
+        pattern = r"^\+?[0-9\s\-\(\)]{10,20}$"
+        return bool(re.match(pattern, phone))
+
+    def is_valid_email(self, email: str) -> bool:
+        pattern = r"^[\w\.-]+@[\w\.-]+\.\w+$"
+        return bool(re.match(pattern, email))
+
+    def send_application_to_google_sheets(self, application: dict) -> bool:
+        if not self.google_script_url:
+            print("GOOGLE_SCRIPT_URL не задан", flush=True)
+            return False
+
+        try:
+            response = requests.post(
+                self.google_script_url,
+                json=application,
+                timeout=10
+            )
+
+            print("GOOGLE SHEETS STATUS:", response.status_code, flush=True)
+            print("GOOGLE SHEETS RESPONSE:", response.text, flush=True)
+
+            return response.status_code == 200
+
+        except Exception as e:
+            print("Ошибка отправки заявки в Google Sheets:", e, flush=True)
+            return False
+
+    def start_application(self, user_id: str) -> str:
+        self.user_states[user_id] = {
+            "step": "name",
+            "data": {}
+        }
+
+        return (
+            "Отлично, помогу оставить заявку 😊\n\n"
+            "Как вас зовут?"
+        )
+
+    def process_application_step(self, user_id: str, text: str) -> str:
+        state = self.user_states.get(user_id)
+
+        if not state:
+            return ""
+
+        step = state["step"]
+        data = state["data"]
+
+        if step == "name":
+            if len(text) < 2:
+                return "Пожалуйста, напишите имя."
+
+            data["name"] = text
+            state["step"] = "phone"
+
+            return (
+                "Спасибо! Теперь оставьте номер телефона.\n\n"
+                "Например: +7 999 123-45-67"
+            )
+
+        if step == "phone":
+            if not self.is_valid_phone(text):
+                return (
+                    "Похоже, номер телефона введён некорректно.\n"
+                    "Пожалуйста, укажите номер в формате: +7 999 123-45-67"
+                )
+
+            data["phone"] = text
+            state["step"] = "email"
+
+            return (
+                "Отлично. Теперь укажите электронную почту.\n\n"
+                "Например: example@mail.ru"
+            )
+
+        if step == "email":
+            if not self.is_valid_email(text):
+                return (
+                    "Похоже, email введён некорректно.\n"
+                    "Пожалуйста, укажите почту в формате: example@mail.ru"
+                )
+
+            data["email"] = text
+
+            success = self.send_application_to_google_sheets(data)
+
+            self.user_states.pop(user_id, None)
+
+            if success:
+                return (
+                    "Спасибо! Заявка отправлена 😊\n"
+                    "Менеджер свяжется с вами в ближайшее время."
+                )
+
+            return (
+                "Заявку не удалось отправить автоматически.\n\n"
+                "Пожалуйста, свяжитесь с нами напрямую:\n"
+                "Телефон: +79200690200\n"
+                "Email: nn@algoritmika.org"
+            )
+
+        return self.get_help_text()
+
+    def get_response(self, text: str, user_id: str = "default") -> str:
         text = (text or "").strip()
         lowered = text.lower()
+
+        if not text:
+            return "Пожалуйста, напишите сообщение."
+
+        if user_id in self.user_states:
+            return self.process_application_step(user_id, text)
 
         if lowered == "/start":
             return self.get_start_text()
@@ -62,5 +181,8 @@ class BotLogic:
 
         if lowered == "помощь":
             return self.get_help_text()
+
+        if lowered in ["записаться", "запись", "оставить заявку", "хочу записаться"]:
+            return self.start_application(user_id)
 
         return self.ai.ask(text)
