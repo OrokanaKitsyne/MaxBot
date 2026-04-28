@@ -165,14 +165,21 @@ def get_courses_keyboard():
 
     return make_keyboard(buttons)
 
-
 def get_lessons_keyboard(course_name):
     buttons = []
+    row = []
 
     for lesson_num in feedback_bot.get_lessons(course_name):
-        buttons.append([
-            callback_button(f"Урок №{lesson_num}", f"feedback:lesson:{lesson_num}")
-        ])
+        row.append(
+            callback_button(f"№{lesson_num}", f"feedback:lesson:{lesson_num}")
+        )
+
+        if len(row) == 4:
+            buttons.append(row)
+            row = []
+
+    if row:
+        buttons.append(row)
 
     buttons.append([
         callback_button("← К курсам", "feedback:course_list")
