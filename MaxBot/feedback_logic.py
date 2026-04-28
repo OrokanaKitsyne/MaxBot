@@ -51,15 +51,25 @@ class FeedbackBotLogic:
             self.user_state[user_id] = {}
 
         self.user_state[user_id]["lesson"] = str(lesson_num)
+        
+    def get_greeting():
+        hour = datetime.now().hour
 
+        if 5 <= hour < 12:
+            return "🌅 Доброе утро"
+        elif 12 <= hour < 18:
+            return "☀️ Добрый день"
+        else:
+            return "🌙 Добрый вечер"
+            
     def generate_feedback(self, user_id, lesson_type):
         today = datetime.now().strftime("%d.%m.%Y")
-
+        greeting = get_greeting()
         state = self.get_state(user_id)
 
         if not state:
             return "Ошибка: сначала выберите курс и урок."
-
+    
         course_name = state.get("course")
         lesson_num = state.get("lesson")
 
@@ -76,7 +86,7 @@ class FeedbackBotLogic:
 
         text = f"""Обратная связь урок №{lesson_num} от {today}
 
-🌙 Добрый вечер, уважаемые родители!
+{greeting}, уважаемые родители!
 
 🔥 Делюсь результатами работы на уроке «{lesson["title"]}» 🔥
 
