@@ -13,6 +13,7 @@ class ReminderBotLogic:
         user_id = event["user_id"]
         user_name = event["user_name"]
         command = event["command"]
+        callback_id = event["callback_id"]
 
         if not chat_id or not user_id:
             return None
@@ -27,13 +28,16 @@ class ReminderBotLogic:
             return None
 
         if command == "reminder:schedule":
-            return self.show_schedule(chat_id, user_id)
+            return self.show_schedule(chat_id, user_id, callback_id)
 
         if command == "reminder:notifications_on":
-            return self.enable_notifications(chat_id, user_id)
+            return self.enable_notifications(chat_id, user_id, callback_id)
 
         if command == "reminder:notifications_off":
-            return self.disable_notifications(chat_id, user_id)
+            return self.disable_notifications(chat_id, user_id, callback_id)
+
+        if command.startswith("feedback:rating:"):
+            return self.save_feedback_rating(chat_id, user_id, command, callback_id)
 
         return self.register_by_code(chat_id, user_id, user_name, command)
 
@@ -74,12 +78,13 @@ class ReminderBotLogic:
             "attachments": self.get_keyboard(False)
         }
 
-    def show_schedule(self, chat_id, user_id):
+    def show_schedule(self, chat_id, user_id, callback_id=None):
         parent = self.db.get_parent(user_id)
 
         if not parent:
             return {
                 "chat_id": chat_id,
+                "callback_id": callback_id,
                 "text": "Сначала пришлите код группы 🔑"
             }
 
@@ -88,6 +93,7 @@ class ReminderBotLogic:
 
         return {
             "chat_id": chat_id,
+            "callback_id": callback_id,
             "text": (
                 f"👥 Группа: {group['name']}\n"
                 f"📚 Курс: {group['course_name']}\n\n"
@@ -98,12 +104,13 @@ class ReminderBotLogic:
             )
         }
 
-    def enable_notifications(self, chat_id, user_id):
+    def enable_notifications(self, chat_id, user_id, callback_id=None):
         parent = self.db.get_parent(user_id)
 
         if not parent:
             return {
                 "chat_id": chat_id,
+                "callback_id": callback_id,
                 "text": "Сначала пришлите код группы 🔑"
             }
 
@@ -111,6 +118,7 @@ class ReminderBotLogic:
 
         return {
             "chat_id": chat_id,
+            "callback_id": callback_id,
             "text": (
                 "🔔 Уведомления включены!\n\n"
                 "Теперь бот будет напоминать о занятиях за сутки 📚\n\n"
@@ -120,12 +128,13 @@ class ReminderBotLogic:
             "attachments": self.get_keyboard(True)
         }
 
-    def disable_notifications(self, chat_id, user_id):
+    def disable_notifications(self, chat_id, user_id, callback_id=None):
         parent = self.db.get_parent(user_id)
 
         if not parent:
             return {
                 "chat_id": chat_id,
+                "callback_id": callback_id,
                 "text": "Сначала пришлите код группы 🔑"
             }
 
@@ -133,6 +142,7 @@ class ReminderBotLogic:
 
         return {
             "chat_id": chat_id,
+            "callback_id": callback_id,
             "text": (
                 "🔕 Уведомления выключены.\n\n"
                 "Автоматические напоминания больше не будут отправляться.\n\n"
@@ -140,6 +150,31 @@ class ReminderBotLogic:
                 "🔔 «Включить уведомления» — снова включит автоматические напоминания."
             ),
             "attachments": self.get_keyboard(False)
+        }
+
+    def save_feedback_rating(self, chat_id, user_id, command, callback_id=None):
+        parts = command.split(":")
+        lesson_id = parts[2]
+        rating = int(parts[3])
+
+        parent = self.db.get_parent(user_id)
+
+        if not parent:
+            return {
+                "chat_id": chat_id,
+                "callback_id": callback_id,
+                "text": "Сначала пришлите код группы 🔑"
+            }
+
+        self.db.save_feedback(parent["id"], lesson_id, rating)
+
+        return {
+            "chat_id": chat_id,
+            "callback_id": callback_id,
+            "text": (
+                "Спасибо за обратную связь! 😊\n\n"
+                f"Ваша оценка: {rating} ⭐"
+            )
         }
 
     def format_schedule(self, lessons):
@@ -229,10 +264,17 @@ class ReminderBotLogic:
             or data.get("message_callback", {}).get("payload")
         )
 
+        callback_id = (
+            data.get("callback", {}).get("callback_id")
+            or data.get("message_callback", {}).get("callback_id")
+            or data.get("callback_id")
+        )
+
         return {
             "update_type": update_type,
             "chat_id": chat_id,
             "user_id": str(user_id) if user_id else None,
             "user_name": user_name,
-            "command": str(payload or text or "").strip()
+            "command": str(payload or text or "").strip(),
+            "callback_id": callback_id
         }
