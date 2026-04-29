@@ -23,8 +23,7 @@ class ReminderDB:
         )
 
         return result.data[0] if result.data else None
-
-    def register_parent(self, max_user_id, parent_name, invite_code):
+    def register_parent(self, max_user_id, parent_name, invite_code, chat_id=None):
         group_result = (
             supabase
             .table("groups")
@@ -41,6 +40,7 @@ class ReminderDB:
         supabase.table("parents").upsert(
             {
                 "max_user_id": int(max_user_id),
+                "chat_id": int(chat_id) if chat_id else None,
                 "parent_name": parent_name,
                 "group_id": group["id"],
                 "notifications_enabled": False
@@ -49,6 +49,7 @@ class ReminderDB:
         ).execute()
 
         return group
+   
 
     def set_notifications(self, max_user_id, enabled):
         supabase.table("parents").update({
