@@ -2,7 +2,6 @@ import os
 from datetime import datetime, timedelta
 
 from flask import Flask, request, jsonify
-import requests
 
 from max_api import send_message, answer_callback
 from bot_logic import BotLogic
@@ -15,8 +14,6 @@ from reminder_scheduler import ReminderScheduler
 MAIN_TOKEN = os.getenv("MAX_BOT_TOKEN", "").strip()
 FEEDBACK_TOKEN = os.getenv("MAX_FEEDBACK_BOT_TOKEN", "").strip()
 REMINDER_TOKEN = os.getenv("MAX_REMINDER_BOT_TOKEN", "").strip()
-
-BASE_URL = "https://platform-api.max.ru"
 
 if not MAIN_TOKEN:
     raise ValueError("Не задана переменная окружения MAX_BOT_TOKEN")
@@ -57,44 +54,22 @@ def home():
     return "Bot is running", 200
 
 
-def request_max(method, token, path, payload=None, params=None):
-    url = f"{BASE_URL}{path}"
+def delete_message(token, message_id):
+    print(f"Trying to delete message: {message_id}", flush=True)
 
-    headers = {
-        "Authorization": token,
-        "Content-Type": "application/json"
-    }
+    if not message_id:
+        print("DELETE MESSAGE ERROR: message_id is empty", flush=True)
+        return None
 
     try:
-        response = requests.request(
-            method=method,
-            url=url,
-            headers=headers,
-            json=payload,
-            params=params,
-            timeout=20
-        )
-        print(f"{method} {path} STATUS:", response.status_code, flush=True)
-        print(f"{method} {path} RESPONSE:", response.text, flush=True)
-        return response
+        from max_api import delete_message as max_delete_message
+        return max_delete_message(token, message_id)
     except Exception as e:
-        print(f"{method} {path} ERROR:", str(e), flush=True)
+        print("DELETE MESSAGE ERROR:", str(e), flush=True)
         return None
-
-
-def delete_message(token, message_id):
-    if not message_id:
-        return None
-
-    return request_max(
-        "DELETE",
-        token,
-        f"/messages/{message_id}"
-    )
 
 
 def extract_message_id(response):
-    """Берёт mid из ответа POST /messages, если сообщение было создано заново."""
     try:
         data = response.json()
         return (
@@ -107,7 +82,6 @@ def extract_message_id(response):
 
 
 def extract_message_id_from_update(data):
-    """Берёт mid исходного сообщения из callback-события MAX."""
     return (
         data.get("message", {})
         .get("body", {})
@@ -120,13 +94,20 @@ def delete_message_later(token, message_id, seconds=10):
         print("DELETE MESSAGE ERROR: message_id is empty", flush=True)
         return
 
+    run_date = datetime.now() + timedelta(seconds=seconds)
+
     scheduler.add_job(
-        lambda: delete_message(token, message_id),
-        "date",
-        run_date=datetime.now() + timedelta(seconds=seconds)
+        func=delete_message,
+        trigger="date",
+        run_date=run_date,
+        args=[token, message_id],
+        misfire_grace_time=30
     )
 
-    print(f"Message {message_id} will be deleted after {seconds} seconds", flush=True)
+    print(
+        f"Message {message_id} will be deleted at {run_date}",
+        flush=True
+    )
 
 
 def answer_or_send(token, chat_id, callback_id, text, attachments=None):
@@ -515,6 +496,7 @@ def reminder_webhook():
                 if result is not None and result.status_code in (200, 201, 202, 204):
                     if response.get("delete_after_seconds"):
                         message_id = extract_message_id_from_update(data)
+
                         delete_message_later(
                             REMINDER_TOKEN,
                             message_id,
@@ -532,6 +514,7 @@ def reminder_webhook():
 
             if response.get("delete_after_seconds"):
                 message_id = extract_message_id(result)
+
                 delete_message_later(
                     REMINDER_TOKEN,
                     message_id,
