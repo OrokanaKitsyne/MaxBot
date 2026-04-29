@@ -166,7 +166,6 @@ class ReminderBotLogic:
             }
 
         self.db.save_feedback(parent["id"], lesson_id, rating)
-
         return {
             "chat_id": chat_id,
             "callback_id": callback_id,
@@ -175,8 +174,10 @@ class ReminderBotLogic:
                 f"Ваша оценка: {'⭐' * rating}\n\n"
                 "Это сообщение исчезнет через некоторое время."
             ),
+            "attachments": [],
             "delete_after_seconds": 10
         }
+     
     
 
     def format_schedule(self, lessons):
