@@ -50,7 +50,7 @@ class ReminderBotLogic:
         return "Здравствуйте! Пришлите код группы, который выдал администратор."
 
     def register_by_code(self, chat_id, user_id, user_name, code):
-        group = self.db.register_parent(user_id, user_name, code)
+        group = self.db.register_parent(user_id, user_name, code, chat_id)
 
         if not group:
             return {
