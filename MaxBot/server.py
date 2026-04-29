@@ -94,6 +94,7 @@ def delete_message(token, message_id):
 
 
 def extract_message_id(response):
+    """Берёт mid из ответа POST /messages, если сообщение было создано заново."""
     try:
         data = response.json()
         return (
@@ -103,13 +104,16 @@ def extract_message_id(response):
         )
     except Exception:
         return None
-        
+
+
 def extract_message_id_from_update(data):
+    """Берёт mid исходного сообщения из callback-события MAX."""
     return (
         data.get("message", {})
         .get("body", {})
         .get("mid")
     )
+
 
 def delete_message_later(token, message_id, seconds=10):
     if not message_id:
@@ -510,7 +514,7 @@ def reminder_webhook():
 
                 if result is not None and result.status_code in (200, 201, 202, 204):
                     if response.get("delete_after_seconds"):
-                        message_id = extract_message_id(result)
+                        message_id = extract_message_id_from_update(data)
                         delete_message_later(
                             REMINDER_TOKEN,
                             message_id,
@@ -527,13 +531,13 @@ def reminder_webhook():
             )
 
             if response.get("delete_after_seconds"):
-                message_id = extract_message_id_from_update(data)
+                message_id = extract_message_id(result)
                 delete_message_later(
                     REMINDER_TOKEN,
                     message_id,
                     seconds=response["delete_after_seconds"]
                 )
-                
+
     except Exception as e:
         print("REMINDER WEBHOOK ERROR:", str(e), flush=True)
 
