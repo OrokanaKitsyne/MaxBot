@@ -151,8 +151,17 @@ class ReminderBotLogic:
             ),
             "attachments": self.get_keyboard(False)
         }
+
     def save_feedback_rating(self, chat_id, user_id, command, callback_id=None):
         parts = command.split(":")
+
+        if len(parts) != 4:
+            return {
+                "chat_id": chat_id,
+                "callback_id": callback_id,
+                "text": "Не удалось обработать оценку. Попробуйте ещё раз."
+            }
+
         lesson_id = parts[2]
         rating = int(parts[3])
 
@@ -166,6 +175,7 @@ class ReminderBotLogic:
             }
 
         self.db.save_feedback(parent["id"], lesson_id, rating)
+
         return {
             "chat_id": chat_id,
             "callback_id": callback_id,
@@ -177,8 +187,6 @@ class ReminderBotLogic:
             "attachments": [],
             "delete_after_seconds": 10
         }
-     
-    
 
     def format_schedule(self, lessons):
         if not lessons:
