@@ -1,6 +1,4 @@
 import os
-from datetime import datetime, timedelta
-
 from flask import Flask, request, jsonify
 
 from max_api import send_message, answer_callback
@@ -52,62 +50,6 @@ def health():
 @app.route("/", methods=["GET"])
 def home():
     return "Bot is running", 200
-
-
-def delete_message(token, message_id):
-    print(f"Trying to delete message: {message_id}", flush=True)
-
-    if not message_id:
-        print("DELETE MESSAGE ERROR: message_id is empty", flush=True)
-        return None
-
-    try:
-        from max_api import delete_message as max_delete_message
-        return max_delete_message(token, message_id)
-    except Exception as e:
-        print("DELETE MESSAGE ERROR:", str(e), flush=True)
-        return None
-
-
-def extract_message_id(response):
-    try:
-        data = response.json()
-        return (
-            data.get("message", {})
-            .get("body", {})
-            .get("mid")
-        )
-    except Exception:
-        return None
-
-
-def extract_message_id_from_update(data):
-    return (
-        data.get("message", {})
-        .get("body", {})
-        .get("mid")
-    )
-
-
-def delete_message_later(token, message_id, seconds=10):
-    if not message_id:
-        print("DELETE MESSAGE ERROR: message_id is empty", flush=True)
-        return
-
-    run_date = datetime.now() + timedelta(seconds=seconds)
-
-    scheduler.add_job(
-        func=delete_message,
-        trigger="date",
-        run_date=run_date,
-        args=[token, message_id],
-        misfire_grace_time=30
-    )
-
-    print(
-        f"Message {message_id} will be deleted at {run_date}",
-        flush=True
-    )
 
 
 def answer_or_send(token, chat_id, callback_id, text, attachments=None):
@@ -483,43 +425,13 @@ def reminder_webhook():
         response = reminder_bot.handle_update(data)
 
         if response:
-            callback_id = response.get("callback_id")
-
-            if callback_id:
-                result = answer_callback(
-                    REMINDER_TOKEN,
-                    callback_id,
-                    response["text"],
-                    attachments=response.get("attachments")
-                )
-
-                if result is not None and result.status_code in (200, 201, 202, 204):
-                    if response.get("delete_after_seconds"):
-                        message_id = extract_message_id_from_update(data)
-
-                        delete_message_later(
-                            REMINDER_TOKEN,
-                            message_id,
-                            seconds=response["delete_after_seconds"]
-                        )
-
-                    return jsonify({"status": "ok"}), 200
-
-            result = send_message(
+            answer_or_send(
                 REMINDER_TOKEN,
                 response["chat_id"],
+                response.get("callback_id"),
                 response["text"],
                 attachments=response.get("attachments")
             )
-
-            if response.get("delete_after_seconds"):
-                message_id = extract_message_id(result)
-
-                delete_message_later(
-                    REMINDER_TOKEN,
-                    message_id,
-                    seconds=response["delete_after_seconds"]
-                )
 
     except Exception as e:
         print("REMINDER WEBHOOK ERROR:", str(e), flush=True)
