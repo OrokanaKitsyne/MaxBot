@@ -47,7 +47,7 @@ def answer_callback(token, callback_id, text, attachments=None):
 
     message = {"text": text}
 
-    if attachments:
+   if attachments is not None:
         message["attachments"] = attachments
 
     payload = {
