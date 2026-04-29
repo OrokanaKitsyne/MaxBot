@@ -14,8 +14,8 @@ class ReminderScheduler:
 
     def check_lessons(self):
         print("Checking lessons...", flush=True)
-        now = datetime.now(TIMEZONE)
 
+        now = datetime.now(TIMEZONE)
         today = now.date()
         tomorrow = today + timedelta(days=1)
 
@@ -38,6 +38,8 @@ class ReminderScheduler:
             reminder_time = lesson_datetime - timedelta(days=1)
 
             if now >= reminder_time:
+                print(f"Sending reminder for lesson {lesson['lesson_number']}", flush=True)
+
                 self.send_lesson_reminder(lesson)
                 self.mark_reminder_sent(lesson["id"])
 
@@ -54,6 +56,7 @@ class ReminderScheduler:
         )
 
         parents = parents_result.data or []
+        lesson_time = str(lesson["lesson_time"])[:5]
 
         for parent in parents:
             chat_id = parent.get("chat_id")
@@ -62,10 +65,12 @@ class ReminderScheduler:
                 continue
 
             text = (
-                f"Напоминание о занятии.\n\n"
-                f"Завтра состоится урок №{lesson['lesson_number']}.\n"
-                f"Дата: {lesson['lesson_date']}\n"
-                f"Время: {lesson['lesson_time']}"
+                f"📚 Напоминание о занятии\n\n"
+                f"Здравствуйте! 😊\n\n"
+                f"Завтра состоится урок №{lesson['lesson_number']}.\n\n"
+                f"📅 Дата: {lesson['lesson_date']}\n"
+                f"⏰ Время: {lesson_time}\n\n"
+                f"Ждём вас на занятии! 🚀"
             )
 
             send_message(self.token, chat_id, text)
