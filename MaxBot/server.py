@@ -28,6 +28,15 @@ main_bot = BotLogic()
 feedback_bot = FeedbackBotLogic()
 reminder_bot = ReminderBotLogic()
 
+reminder_scheduler = ReminderScheduler(REMINDER_TOKEN)
+
+scheduler = BackgroundScheduler(timezone="Europe/Moscow")
+scheduler.add_job(
+    reminder_scheduler.check_lessons,
+    "interval",
+    minutes=1
+)
+scheduler.start()
 
 @app.route("/health")
 def health():
