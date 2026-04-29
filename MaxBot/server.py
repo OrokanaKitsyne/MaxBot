@@ -2,6 +2,7 @@ import os
 from flask import Flask, request, jsonify
 import requests
 
+from max_api import send_message, answer_callback
 from bot_logic import BotLogic
 from feedback_logic import FeedbackBotLogic
 from reminder_logic import ReminderBotLogic
@@ -479,7 +480,6 @@ def feedback_webhook():
 
     return jsonify({"status": "ok"}), 200
 
-
 @app.route("/webhook/reminder", methods=["POST"])
 def reminder_webhook():
     data = request.get_json(silent=True) or {}
@@ -489,6 +489,19 @@ def reminder_webhook():
         response = reminder_bot.handle_update(data)
 
         if response:
+            callback_id = response.get("callback_id")
+
+            if callback_id:
+                result = answer_callback(
+                    REMINDER_TOKEN,
+                    callback_id,
+                    response["text"],
+                    attachments=response.get("attachments")
+                )
+
+                if result is not None and result.status_code in (200, 201, 202, 204):
+                    return jsonify({"status": "ok"}), 200
+
             send_message(
                 REMINDER_TOKEN,
                 response["chat_id"],
@@ -500,7 +513,3 @@ def reminder_webhook():
         print("REMINDER WEBHOOK ERROR:", str(e), flush=True)
 
     return jsonify({"status": "ok"}), 200
-
-
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=10000)
