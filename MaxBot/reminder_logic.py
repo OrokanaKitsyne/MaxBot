@@ -89,27 +89,52 @@ class ReminderBotLogic:
                 f"Курс: {group['course_name']}\n\n"
                 f"{self.format_schedule(lessons)}"
             ),
-            "attachments": self.get_keyboard(parent.get("notifications_enabled", False))
+            "attachments": self.get_keyboard(
+                parent.get("notifications_enabled", False)
+            )
         }
 
     def enable_notifications(self, chat_id, user_id):
+        parent = self.db.get_parent(user_id)
+
+        if not parent:
+            return {
+                "chat_id": chat_id,
+                "text": "Сначала пришлите код группы."
+            }
+
         self.db.set_notifications(user_id, True)
 
         return {
             "chat_id": chat_id,
             "text": (
                 "Уведомления включены.\n\n"
-                "Теперь бот будет напоминать о занятиях за сутки."
+                "Теперь бот будет напоминать о занятиях за сутки.\n\n"
+                "«Посмотреть всё расписание» — покажет все занятия группы.\n"
+                "«Выключить уведомления» — отключит автоматические напоминания."
             ),
             "attachments": self.get_keyboard(True)
         }
 
     def disable_notifications(self, chat_id, user_id):
+        parent = self.db.get_parent(user_id)
+
+        if not parent:
+            return {
+                "chat_id": chat_id,
+                "text": "Сначала пришлите код группы."
+            }
+
         self.db.set_notifications(user_id, False)
 
         return {
             "chat_id": chat_id,
-            "text": "Уведомления выключены.",
+            "text": (
+                "Уведомления выключены.\n\n"
+                "Автоматические напоминания больше не будут отправляться.\n\n"
+                "«Посмотреть всё расписание» — покажет все занятия группы.\n"
+                "«Включить уведомления» — снова включит автоматические напоминания."
+            ),
             "attachments": self.get_keyboard(False)
         }
 
@@ -158,58 +183,50 @@ class ReminderBotLogic:
                 }
             }
         ]
-def extract_event(self, data):
-    update_type = data.get("update_type")
 
-    chat_id = (
-        data.get("chat_id")
-        or data.get("message", {}).get("recipient", {}).get("chat_id")
-        or data.get("message_callback", {}).get("chat_id")
-        or data.get("callback", {}).get("chat_id")
-    )
+    def extract_event(self, data):
+        update_type = data.get("update_type")
 
-  
-    if update_type == "message_callback":
-        user = (
-            data.get("callback", {}).get("user", {})
-            or data.get("message_callback", {}).get("user", {})
-            or {}
-        )
-    else:
-        user = (
-            data.get("user")
-            or data.get("message", {}).get("sender", {})
-            or data.get("callback", {}).get("user", {})
-            or data.get("message_callback", {}).get("user", {})
-            or {}
+        chat_id = (
+            data.get("chat_id")
+            or data.get("message", {}).get("recipient", {}).get("chat_id")
+            or data.get("message_callback", {}).get("chat_id")
+            or data.get("callback", {}).get("chat_id")
         )
 
-    user_id = user.get("user_id")
-    user_name = user.get("name") or user.get("first_name")
+        if update_type == "message_callback":
+            user = (
+                data.get("callback", {}).get("user", {})
+                or data.get("message_callback", {}).get("user", {})
+                or {}
+            )
+        else:
+            user = (
+                data.get("user")
+                or data.get("message", {}).get("sender", {})
+                or data.get("callback", {}).get("user", {})
+                or data.get("message_callback", {}).get("user", {})
+                or {}
+            )
 
-    text = (
-        data.get("message", {}).get("body", {}).get("text")
-        or data.get("message", {}).get("text")
-    )
+        user_id = user.get("user_id")
+        user_name = user.get("name") or user.get("first_name")
 
-    payload = (
-        data.get("payload")
-        or data.get("callback", {}).get("payload")
-        or data.get("message_callback", {}).get("payload")
-    )
+        text = (
+            data.get("message", {}).get("body", {}).get("text")
+            or data.get("message", {}).get("text")
+        )
 
-    callback_id = (
-        data.get("callback", {}).get("callback_id")
-        or data.get("message_callback", {}).get("callback_id")
-        or data.get("callback_id")
-    )
+        payload = (
+            data.get("payload")
+            or data.get("callback", {}).get("payload")
+            or data.get("message_callback", {}).get("payload")
+        )
 
-    return {
-        "update_type": update_type,
-        "chat_id": chat_id,
-        "user_id": str(user_id) if user_id else None,
-        "user_name": user_name,
-        "command": str(payload or text or "").strip(),
-        "callback_id": callback_id
-    }
-   
+        return {
+            "update_type": update_type,
+            "chat_id": chat_id,
+            "user_id": str(user_id) if user_id else None,
+            "user_name": user_name,
+            "command": str(payload or text or "").strip()
+        }
