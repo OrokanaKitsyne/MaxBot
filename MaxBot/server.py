@@ -5,7 +5,8 @@ import requests
 from bot_logic import BotLogic
 from feedback_logic import FeedbackBotLogic
 from reminder_logic import ReminderBotLogic
-
+from apscheduler.schedulers.background import BackgroundScheduler
+from reminder_scheduler import ReminderScheduler
 
 MAIN_TOKEN = os.getenv("MAX_BOT_TOKEN", "").strip()
 FEEDBACK_TOKEN = os.getenv("MAX_FEEDBACK_BOT_TOKEN", "").strip()
@@ -28,6 +29,18 @@ app = Flask(__name__)
 bot = BotLogic()
 feedback_bot = FeedbackBotLogic()
 reminder_bot = ReminderBotLogic()
+
+reminder_scheduler = ReminderScheduler(REMINDER_TOKEN)
+
+scheduler = BackgroundScheduler(timezone="Europe/Moscow")
+scheduler.add_job(
+    reminder_scheduler.check_lessons,
+    "interval",
+    minutes=1
+)
+scheduler.start()
+
+print("REMINDER SCHEDULER STARTED", flush=True)
 
 
 @app.route("/health")
