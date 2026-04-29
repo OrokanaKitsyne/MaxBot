@@ -39,6 +39,9 @@ class ReminderBotLogic:
         if command.startswith("feedback:rating:"):
             return self.save_feedback_rating(chat_id, user_id, command, callback_id)
 
+        if command == "feedback:clear":
+            return self.clear_feedback_message(chat_id, callback_id)
+
         return self.register_by_code(chat_id, user_id, user_name, command)
 
     def get_start_text(self, payload):
@@ -182,10 +185,32 @@ class ReminderBotLogic:
             "text": (
                 "Спасибо за обратную связь! 😊\n\n"
                 f"Ваша оценка: {'⭐' * rating}\n\n"
-                "Это сообщение исчезнет через некоторое время."
+                "Нажмите кнопку ниже, чтобы очистить сообщение 👇"
             ),
-            "attachments": [],
-            "delete_after_seconds": 10
+            "attachments": [
+                {
+                    "type": "inline_keyboard",
+                    "payload": {
+                        "buttons": [
+                            [
+                                {
+                                    "type": "callback",
+                                    "text": "🧹 Стереть сообщение",
+                                    "payload": "feedback:clear"
+                                }
+                            ]
+                        ]
+                    }
+                }
+            ]
+        }
+
+    def clear_feedback_message(self, chat_id, callback_id=None):
+        return {
+            "chat_id": chat_id,
+            "callback_id": callback_id,
+            "text": "✅ Сообщение очищено",
+            "attachments": []
         }
 
     def format_schedule(self, lessons):
