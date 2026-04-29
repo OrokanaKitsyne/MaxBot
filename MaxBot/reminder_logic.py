@@ -40,14 +40,17 @@ class ReminderBotLogic:
     def get_start_text(self, payload):
         if payload == "hello":
             return (
-                "Здравствуйте!\n\n"
-                "Я бот-напоминалка о занятиях.\n\n"
+                "Здравствуйте! 😊\n\n"
+                "Я бот-напоминалка о занятиях 📚\n\n"
                 "Чтобы подключиться к расписанию, пришлите код группы, "
                 "который выдал администратор.\n\n"
                 "Пример: WEB2026"
             )
 
-        return "Здравствуйте! Пришлите код группы, который выдал администратор."
+        return (
+            "Здравствуйте! 😊\n\n"
+            "Пришлите код группы, который выдал администратор."
+        )
 
     def register_by_code(self, chat_id, user_id, user_name, code):
         group = self.db.register_parent(user_id, user_name, code, chat_id)
@@ -55,17 +58,18 @@ class ReminderBotLogic:
         if not group:
             return {
                 "chat_id": chat_id,
-                "text": "Код группы не найден. Проверьте код и отправьте его ещё раз."
+                "text": "Код группы не найден 😔\n\nПроверьте код и отправьте его ещё раз."
             }
 
         return {
             "chat_id": chat_id,
             "text": (
-                "Связь с таблицей установлена.\n\n"
-                f"Вы привязаны к группе: {group['name']}\n"
-                f"Курс: {group['course_name']}\n\n"
-                "«Посмотреть всё расписание» — покажет все занятия группы.\n"
-                "«Включить уведомления» — бот будет напоминать о занятиях за сутки."
+                "✅ Связь с таблицей установлена!\n\n"
+                f"👥 Вы привязаны к группе: {group['name']}\n"
+                f"📚 Курс: {group['course_name']}\n\n"
+                "Теперь вы можете выбрать действие:\n\n"
+                "📅 «Посмотреть всё расписание» — покажет все занятия группы.\n"
+                "🔔 «Включить уведомления» — бот будет напоминать о занятиях за сутки."
             ),
             "attachments": self.get_keyboard(False)
         }
@@ -76,7 +80,7 @@ class ReminderBotLogic:
         if not parent:
             return {
                 "chat_id": chat_id,
-                "text": "Сначала пришлите код группы."
+                "text": "Сначала пришлите код группы 🔑"
             }
 
         lessons = self.db.get_schedule(parent["group_id"])
@@ -85,8 +89,8 @@ class ReminderBotLogic:
         return {
             "chat_id": chat_id,
             "text": (
-                f"Группа: {group['name']}\n"
-                f"Курс: {group['course_name']}\n\n"
+                f"👥 Группа: {group['name']}\n"
+                f"📚 Курс: {group['course_name']}\n\n"
                 f"{self.format_schedule(lessons)}"
             ),
             "attachments": self.get_keyboard(
@@ -100,7 +104,7 @@ class ReminderBotLogic:
         if not parent:
             return {
                 "chat_id": chat_id,
-                "text": "Сначала пришлите код группы."
+                "text": "Сначала пришлите код группы 🔑"
             }
 
         self.db.set_notifications(user_id, True)
@@ -108,10 +112,10 @@ class ReminderBotLogic:
         return {
             "chat_id": chat_id,
             "text": (
-                "Уведомления включены.\n\n"
-                "Теперь бот будет напоминать о занятиях за сутки.\n\n"
-                "«Посмотреть всё расписание» — покажет все занятия группы.\n"
-                "«Выключить уведомления» — отключит автоматические напоминания."
+                "🔔 Уведомления включены!\n\n"
+                "Теперь бот будет напоминать о занятиях за сутки 📚\n\n"
+                "📅 «Посмотреть всё расписание» — покажет все занятия группы.\n"
+                "🔕 «Выключить уведомления» — отключит автоматические напоминания."
             ),
             "attachments": self.get_keyboard(True)
         }
@@ -122,7 +126,7 @@ class ReminderBotLogic:
         if not parent:
             return {
                 "chat_id": chat_id,
-                "text": "Сначала пришлите код группы."
+                "text": "Сначала пришлите код группы 🔑"
             }
 
         self.db.set_notifications(user_id, False)
@@ -130,24 +134,26 @@ class ReminderBotLogic:
         return {
             "chat_id": chat_id,
             "text": (
-                "Уведомления выключены.\n\n"
+                "🔕 Уведомления выключены.\n\n"
                 "Автоматические напоминания больше не будут отправляться.\n\n"
-                "«Посмотреть всё расписание» — покажет все занятия группы.\n"
-                "«Включить уведомления» — снова включит автоматические напоминания."
+                "📅 «Посмотреть всё расписание» — покажет все занятия группы.\n"
+                "🔔 «Включить уведомления» — снова включит автоматические напоминания."
             ),
             "attachments": self.get_keyboard(False)
         }
 
     def format_schedule(self, lessons):
         if not lessons:
-            return "Расписание пока не добавлено."
+            return "Расписание пока не добавлено 🕓"
 
-        lines = ["Расписание занятий:"]
+        lines = ["📅 Расписание занятий:"]
 
         for lesson in lessons:
+            lesson_time = str(lesson["lesson_time"])[:5]
+
             lines.append(
-                f"Урок №{lesson['lesson_number']} — "
-                f"{lesson['lesson_date']} в {lesson['lesson_time']}"
+                f"📌 Урок №{lesson['lesson_number']} — "
+                f"{lesson['lesson_date']} в {lesson_time}"
             )
 
         return "\n".join(lines)
