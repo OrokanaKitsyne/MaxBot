@@ -4,3 +4,4 @@ requests
 groq
 supabase
 python-dotenv
+APScheduler
