@@ -23,6 +23,7 @@ class ReminderDB:
         )
 
         return result.data[0] if result.data else None
+
     def register_parent(self, max_user_id, parent_name, invite_code, chat_id=None):
         group_result = (
             supabase
@@ -49,12 +50,15 @@ class ReminderDB:
         ).execute()
 
         return group
-   
 
     def set_notifications(self, max_user_id, enabled):
-        supabase.table("parents").update({
-            "notifications_enabled": enabled
-        }).eq("max_user_id", int(max_user_id)).execute()
+        (
+            supabase
+            .table("parents")
+            .update({"notifications_enabled": enabled})
+            .eq("max_user_id", int(max_user_id))
+            .execute()
+        )
 
     def get_schedule(self, group_id):
         result = (
@@ -68,3 +72,18 @@ class ReminderDB:
         )
 
         return result.data or []
+
+    def save_feedback(self, parent_id, lesson_id, rating):
+        (
+            supabase
+            .table("feedback")
+            .upsert(
+                {
+                    "parent_id": parent_id,
+                    "lesson_id": lesson_id,
+                    "rating": int(rating)
+                },
+                on_conflict="parent_id,lesson_id"
+            )
+            .execute()
+        )
