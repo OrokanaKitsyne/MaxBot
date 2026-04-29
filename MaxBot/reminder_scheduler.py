@@ -13,6 +13,7 @@ class ReminderScheduler:
         self.token = token
 
     def check_lessons(self):
+        print("Checking lessons...", flush=True)
         now = datetime.now(TIMEZONE)
 
         today = now.date()
