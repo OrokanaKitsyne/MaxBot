@@ -29,7 +29,7 @@ def request_max(method, token, path, payload=None, params=None):
 def send_message(token, chat_id, text, attachments=None):
     payload = {"text": text}
 
-    if attachments:
+    if attachments is not None:
         payload["attachments"] = attachments
 
     return request_max(
@@ -47,7 +47,7 @@ def answer_callback(token, callback_id, text, attachments=None):
 
     message = {"text": text}
 
-   if attachments is not None:
+    if attachments is not None:
         message["attachments"] = attachments
 
     payload = {
@@ -60,4 +60,15 @@ def answer_callback(token, callback_id, text, attachments=None):
         "/answers",
         payload=payload,
         params={"callback_id": callback_id}
+    )
+
+
+def delete_message(token, message_id):
+    if not message_id:
+        return None
+
+    return request_max(
+        "DELETE",
+        token,
+        f"/messages/{message_id}"
     )
