@@ -103,7 +103,13 @@ def extract_message_id(response):
         )
     except Exception:
         return None
-
+        
+def extract_message_id_from_update(data):
+    return (
+        data.get("message", {})
+        .get("body", {})
+        .get("mid")
+    )
 
 def delete_message_later(token, message_id, seconds=10):
     if not message_id:
@@ -521,13 +527,13 @@ def reminder_webhook():
             )
 
             if response.get("delete_after_seconds"):
-                message_id = extract_message_id(result)
+                message_id = extract_message_id_from_update(data)
                 delete_message_later(
                     REMINDER_TOKEN,
                     message_id,
                     seconds=response["delete_after_seconds"]
                 )
-
+                
     except Exception as e:
         print("REMINDER WEBHOOK ERROR:", str(e), flush=True)
 
