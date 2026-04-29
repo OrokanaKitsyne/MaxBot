@@ -1,7 +1,7 @@
 import json
 from datetime import datetime
 from pathlib import Path
-
+from zoneinfo import ZoneInfo
 
 class FeedbackBotLogic:
     def __init__(self, file_path="feedback_lessons.json"):
@@ -53,7 +53,7 @@ class FeedbackBotLogic:
         self.user_state[user_id]["lesson"] = str(lesson_num)
         
     def get_greeting(self):
-        hour = datetime.now().hour
+        hour = datetime.now(ZoneInfo("Europe/Moscow")).hour
 
         if 5 <= hour < 12:
             return "🌅 Доброе утро"
