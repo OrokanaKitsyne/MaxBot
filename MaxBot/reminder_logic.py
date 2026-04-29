@@ -151,7 +151,6 @@ class ReminderBotLogic:
             ),
             "attachments": self.get_keyboard(False)
         }
-
     def save_feedback_rating(self, chat_id, user_id, command, callback_id=None):
         parts = command.split(":")
         lesson_id = parts[2]
@@ -173,9 +172,12 @@ class ReminderBotLogic:
             "callback_id": callback_id,
             "text": (
                 "Спасибо за обратную связь! 😊\n\n"
-                f"Ваша оценка: {rating} ⭐"
-            )
+                f"Ваша оценка: {'⭐' * rating}\n\n"
+                "Это сообщение исчезнет через некоторое время."
+            ),
+            "delete_after_seconds": 10
         }
+    
 
     def format_schedule(self, lessons):
         if not lessons:
