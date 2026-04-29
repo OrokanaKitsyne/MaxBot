@@ -39,3 +39,25 @@ def send_message(token, chat_id, text, attachments=None):
         payload=payload,
         params={"chat_id": chat_id}
     )
+
+
+def answer_callback(token, callback_id, text, attachments=None):
+    if not callback_id:
+        return None
+
+    message = {"text": text}
+
+    if attachments:
+        message["attachments"] = attachments
+
+    payload = {
+        "message": message
+    }
+
+    return request_max(
+        "POST",
+        token,
+        "/answers",
+        payload=payload,
+        params={"callback_id": callback_id}
+    )
