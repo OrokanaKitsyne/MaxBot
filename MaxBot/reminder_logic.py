@@ -154,7 +154,6 @@ class ReminderBotLogic:
             ),
             "attachments": self.get_keyboard(False)
         }
-
     def save_feedback_rating(self, chat_id, user_id, command, callback_id=None):
         parts = command.split(":")
 
@@ -167,7 +166,7 @@ class ReminderBotLogic:
 
         lesson_id = parts[2]
         rating = int(parts[3])
-
+    
         parent = self.db.get_parent(user_id)
 
         if not parent:
@@ -183,27 +182,15 @@ class ReminderBotLogic:
             "chat_id": chat_id,
             "callback_id": callback_id,
             "text": (
-                "Спасибо за обратную связь! 😊\n\n"
+                f"Спасибо за отзыв! 😊\n\n"
                 f"Ваша оценка: {'⭐' * rating}\n\n"
-                "Нажмите кнопку ниже, чтобы очистить сообщение 👇"
+                "Выберите действие 👇"
             ),
-            "attachments": [
-                {
-                    "type": "inline_keyboard",
-                    "payload": {
-                        "buttons": [
-                            [
-                                {
-                                    "type": "callback",
-                                    "text": "🧹 Стереть сообщение",
-                                    "payload": "feedback:clear"
-                                }
-                            ]
-                        ]
-                    }
-                }
-            ]
+            "attachments": self.get_keyboard(
+                parent.get("notifications_enabled", False)
+            )
         }
+ 
 
     def clear_feedback_message(self, chat_id, callback_id=None):
         return {
