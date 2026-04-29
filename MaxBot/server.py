@@ -1,4 +1,6 @@
 import os
+from datetime import datetime, timedelta
+
 from flask import Flask, request, jsonify
 import requests
 
@@ -8,6 +10,7 @@ from feedback_logic import FeedbackBotLogic
 from reminder_logic import ReminderBotLogic
 from apscheduler.schedulers.background import BackgroundScheduler
 from reminder_scheduler import ReminderScheduler
+
 
 MAIN_TOKEN = os.getenv("MAX_BOT_TOKEN", "").strip()
 FEEDBACK_TOKEN = os.getenv("MAX_FEEDBACK_BOT_TOKEN", "").strip()
@@ -79,42 +82,41 @@ def request_max(method, token, path, payload=None, params=None):
         return None
 
 
-def send_message(token, chat_id, text, attachments=None):
-    payload = {"text": text}
-
-    if attachments is not None:
-        payload["attachments"] = attachments
-
-    return request_max(
-        "POST",
-        token,
-        "/messages",
-        payload=payload,
-        params={"chat_id": chat_id}
-    )
-
-
-def answer_callback(token, callback_id, text, attachments=None, notification=None):
-    if not callback_id:
+def delete_message(token, message_id):
+    if not message_id:
         return None
 
-    message = {"text": text}
-
-    if attachments is not None:
-        message["attachments"] = attachments
-
-    payload = {"message": message}
-
-    if notification:
-        payload["notification"] = notification
-
     return request_max(
-        "POST",
+        "DELETE",
         token,
-        "/answers",
-        payload=payload,
-        params={"callback_id": callback_id}
+        f"/messages/{message_id}"
     )
+
+
+def extract_message_id(response):
+    try:
+        data = response.json()
+        return (
+            data.get("message", {})
+            .get("body", {})
+            .get("mid")
+        )
+    except Exception:
+        return None
+
+
+def delete_message_later(token, message_id, seconds=10):
+    if not message_id:
+        print("DELETE MESSAGE ERROR: message_id is empty", flush=True)
+        return
+
+    scheduler.add_job(
+        lambda: delete_message(token, message_id),
+        "date",
+        run_date=datetime.now() + timedelta(seconds=seconds)
+    )
+
+    print(f"Message {message_id} will be deleted after {seconds} seconds", flush=True)
 
 
 def answer_or_send(token, chat_id, callback_id, text, attachments=None):
@@ -480,6 +482,7 @@ def feedback_webhook():
 
     return jsonify({"status": "ok"}), 200
 
+
 @app.route("/webhook/reminder", methods=["POST"])
 def reminder_webhook():
     data = request.get_json(silent=True) or {}
@@ -500,16 +503,36 @@ def reminder_webhook():
                 )
 
                 if result is not None and result.status_code in (200, 201, 202, 204):
+                    if response.get("delete_after_seconds"):
+                        message_id = extract_message_id(result)
+                        delete_message_later(
+                            REMINDER_TOKEN,
+                            message_id,
+                            seconds=response["delete_after_seconds"]
+                        )
+
                     return jsonify({"status": "ok"}), 200
 
-            send_message(
+            result = send_message(
                 REMINDER_TOKEN,
                 response["chat_id"],
                 response["text"],
                 attachments=response.get("attachments")
             )
 
+            if response.get("delete_after_seconds"):
+                message_id = extract_message_id(result)
+                delete_message_later(
+                    REMINDER_TOKEN,
+                    message_id,
+                    seconds=response["delete_after_seconds"]
+                )
+
     except Exception as e:
         print("REMINDER WEBHOOK ERROR:", str(e), flush=True)
 
     return jsonify({"status": "ok"}), 200
+
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=10000)
