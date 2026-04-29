@@ -78,14 +78,169 @@ def main_webhook():
     return jsonify({"status": "ok"}), 200
 
 
+
 @app.route("/webhook/feedback", methods=["POST"])
 def feedback_webhook():
     data = request.get_json(silent=True) or {}
     print("FEEDBACK UPDATE:", data, flush=True)
 
-    # сюда можно потом вынести feedback по такому же принципу
-    return jsonify({"status": "ok"}), 200
+    chat_id = None
 
+    try:
+        event = extract_feedback_event(data)
+
+        update_type = event["update_type"]
+        chat_id = event["chat_id"]
+        user_id = event["user_id"] or str(chat_id)
+        command = event["command"]
+        callback_id = event["callback_id"]
+
+        print("COMMAND:", command, flush=True)
+        print("CHAT ID:", chat_id, flush=True)
+        print("USER ID:", user_id, flush=True)
+        print("CALLBACK ID:", callback_id, flush=True)
+
+        if not chat_id:
+            return jsonify({"status": "ok"}), 200
+
+        if update_type == "bot_started":
+            send_message(
+                FEEDBACK_TOKEN,
+                chat_id,
+                "Здравствуйте! Нажмите кнопку, чтобы выбрать курс.",
+                attachments=get_feedback_start_keyboard()
+            )
+            return jsonify({"status": "ok"}), 200
+
+        if command in ("feedback:course_list", "список курсов", "/start", "start"):
+            answer_or_send(
+                FEEDBACK_TOKEN,
+                chat_id,
+                callback_id,
+                "Выберите курс:",
+                attachments=get_courses_keyboard()
+            )
+
+        elif command == "feedback:lesson_list":
+            state = feedback_bot.get_state(user_id)
+            course_name = state.get("course")
+
+            if not course_name:
+                answer_or_send(
+                    FEEDBACK_TOKEN,
+                    chat_id,
+                    callback_id,
+                    "Сначала выберите курс:",
+                    attachments=get_courses_keyboard()
+                )
+            else:
+                answer_or_send(
+                    FEEDBACK_TOKEN,
+                    chat_id,
+                    callback_id,
+                    f"Курс: {course_name}\nВыберите номер урока:",
+                    attachments=get_lessons_keyboard(course_name)
+                )
+
+        elif command.startswith("feedback:course:"):
+            course_name = command.replace("feedback:course:", "", 1).strip()
+
+            print("SELECTED COURSE:", course_name, flush=True)
+
+            if not feedback_bot.course_exists(course_name):
+                answer_or_send(
+                    FEEDBACK_TOKEN,
+                    chat_id,
+                    callback_id,
+                    "Курс не найден. Выберите курс из списка:",
+                    attachments=get_courses_keyboard()
+                )
+            else:
+                feedback_bot.set_course(user_id, course_name)
+
+                answer_or_send(
+                    FEEDBACK_TOKEN,
+                    chat_id,
+                    callback_id,
+                    f"Курс выбран: {course_name}\nТеперь выберите номер урока:",
+                    attachments=get_lessons_keyboard(course_name)
+                )
+
+        elif command.startswith("feedback:lesson:"):
+            lesson_num = command.replace("feedback:lesson:", "", 1).strip()
+            state = feedback_bot.get_state(user_id)
+            course_name = state.get("course")
+
+            if not course_name:
+                answer_or_send(
+                    FEEDBACK_TOKEN,
+                    chat_id,
+                    callback_id,
+                    "Сначала выберите курс:",
+                    attachments=get_courses_keyboard()
+                )
+            elif not feedback_bot.lesson_exists(course_name, lesson_num):
+                answer_or_send(
+                    FEEDBACK_TOKEN,
+                    chat_id,
+                    callback_id,
+                    "Урок не найден. Выберите урок из списка:",
+                    attachments=get_lessons_keyboard(course_name)
+                )
+            else:
+                feedback_bot.set_lesson(user_id, lesson_num)
+
+                answer_or_send(
+                    FEEDBACK_TOKEN,
+                    chat_id,
+                    callback_id,
+                    f"Курс: {course_name}\nУрок: №{lesson_num}\nТеперь выберите формат занятия:",
+                    attachments=get_lesson_type_keyboard()
+                )
+
+        elif command == "feedback:type:online":
+            result = feedback_bot.generate_feedback(user_id, "online")
+
+            answer_or_send(
+                FEEDBACK_TOKEN,
+                chat_id,
+                callback_id,
+                result,
+                attachments=get_feedback_result_keyboard()
+            )
+
+        elif command == "feedback:type:offline":
+            result = feedback_bot.generate_feedback(user_id, "offline")
+
+            answer_or_send(
+                FEEDBACK_TOKEN,
+                chat_id,
+                callback_id,
+                result,
+                attachments=get_feedback_result_keyboard()
+            )
+
+        else:
+            answer_or_send(
+                FEEDBACK_TOKEN,
+                chat_id,
+                callback_id,
+                "Нажмите кнопку «Список курсов», чтобы начать.",
+                attachments=get_feedback_start_keyboard()
+            )
+
+    except Exception as e:
+        print("FEEDBACK WEBHOOK ERROR:", str(e), flush=True)
+
+        if chat_id:
+            send_message(
+                FEEDBACK_TOKEN,
+                chat_id,
+                "Произошла ошибка. Попробуйте начать заново.",
+                attachments=get_feedback_start_keyboard()
+            )
+
+    return jsonify({"status": "ok"}), 200
 
 @app.route("/webhook/reminder", methods=["POST"])
 def reminder_webhook():
