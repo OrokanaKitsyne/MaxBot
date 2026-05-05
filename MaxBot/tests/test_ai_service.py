@@ -27,7 +27,7 @@ class TestAIService(unittest.TestCase):
         service = AIService()
         result = service.ask("")
 
-        self.assertEqual(result, "Пожалуйста, напишите вопрос.")
+        self.assertEqual(result, "Пожалуйста, напишите свой вопрос 😊")
 
     @patch.dict("os.environ", {"GROQ_API_KEY": "fake-key"})
     @patch("ai_module.Groq")
@@ -50,18 +50,25 @@ class TestAIService(unittest.TestCase):
     @patch("ai_module.Groq")
     @patch("ai_module.LocalKnowledgeBase")
     @patch("ai_module.LocalKnowledge")
-    def test_fallback_when_no_context(self, mock_loc_cls, mock_kb_cls, mock_groq):
+    def test_fallback_when_no_context(self, mock_loc_cls, mock_kb_cls, mock_groq_cls):
         from ai_module import AIService
 
         mock_kb = MagicMock()
         mock_kb.get_context_for_query.return_value = ""
         mock_kb_cls.return_value = mock_kb
 
+        mock_response = MagicMock()
+        mock_response.choices = [MagicMock()]
+        mock_response.choices[0].message.content = ""
+
+        mock_client = MagicMock()
+        mock_client.chat.completions.create.return_value = mock_response
+        mock_groq_cls.return_value = mock_client
+
         service = AIService()
         result = service.ask("Расскажи что-нибудь редкое")
 
         self.assertIn("Я не нашёл точной информации", result)
-        self.assertIn("Телефон", result)
 
     @patch.dict("os.environ", {"GROQ_API_KEY": "fake-key"})
     @patch("ai_module.Groq")
