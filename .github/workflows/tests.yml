@@ -20,7 +20,7 @@ jobs:
       - name: Установить зависимости
         run: |
           python -m pip install --upgrade pip
-          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          if [ -f MaxBot/requirements.txt ]; then pip install -r MaxBot/requirements.txt; fi
           pip install groq flask gunicorn
 
       - name: Запустить unit-тесты
