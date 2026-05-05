@@ -13,6 +13,7 @@ supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 
 class ReminderDB:
+
     def get_parent(self, max_user_id):
         result = (
             supabase
@@ -21,7 +22,6 @@ class ReminderDB:
             .eq("max_user_id", int(max_user_id))
             .execute()
         )
-
         return result.data[0] if result.data else None
 
     def register_parent(self, max_user_id, parent_name, invite_code, chat_id=None):
@@ -70,7 +70,6 @@ class ReminderDB:
             .order("lesson_time")
             .execute()
         )
-
         return result.data or []
 
     def save_feedback(self, parent_id, lesson_id, rating):
@@ -88,57 +87,36 @@ class ReminderDB:
             .execute()
         )
 
+    def set_waiting_for_comment(self, max_user_id, lesson_id):
+        (
+            supabase
+            .table("parents")
+            .update({
+                "waiting_for_comment": True,
+                "pending_feedback_lesson_id": lesson_id
+            })
+            .eq("max_user_id", int(max_user_id))
+            .execute()
+        )
 
-def save_feedback(self, parent_id, lesson_id, rating, comment=None):
-    payload = {
-        "parent_id": parent_id,
-        "lesson_id": lesson_id,
-        "rating": int(rating)
-    }
+    def clear_waiting_for_comment(self, max_user_id):
+        (
+            supabase
+            .table("parents")
+            .update({
+                "waiting_for_comment": False,
+                "pending_feedback_lesson_id": None
+            })
+            .eq("max_user_id", int(max_user_id))
+            .execute()
+        )
 
-    if comment is not None:
-        payload["comment"] = comment
-
-    (
-        supabase
-        .table("feedback")
-        .upsert(payload, on_conflict="parent_id,lesson_id")
-        .execute()
-    )
-
-
-def set_waiting_for_comment(self, max_user_id, lesson_id):
-    (
-        supabase
-        .table("parents")
-        .update({
-            "waiting_for_comment": True,
-            "pending_feedback_lesson_id": lesson_id
-        })
-        .eq("max_user_id", int(max_user_id))
-        .execute()
-    )
-
-
-def clear_waiting_for_comment(self, max_user_id):
-    (
-        supabase
-        .table("parents")
-        .update({
-            "waiting_for_comment": False,
-            "pending_feedback_lesson_id": None
-        })
-        .eq("max_user_id", int(max_user_id))
-        .execute()
-    )
-
-
-def save_feedback_comment(self, parent_id, lesson_id, comment):
-    (
-        supabase
-        .table("feedback")
-        .update({"comment": comment})
-        .eq("parent_id", parent_id)
-        .eq("lesson_id", lesson_id)
-        .execute()
-    )
+    def save_feedback_comment(self, parent_id, lesson_id, comment):
+        (
+            supabase
+            .table("feedback")
+            .update({"comment": comment})
+            .eq("parent_id", parent_id)
+            .eq("lesson_id", lesson_id)
+            .execute()
+        )
