@@ -27,6 +27,11 @@ class ReminderBotLogic:
         if update_type not in ("message_created", "message_callback"):
             return None
 
+        parent = self.db.get_parent(user_id)
+
+        if update_type == "message_created" and parent and parent.get("waiting_for_comment"):
+            return self.save_comment(chat_id, user_id, command)
+
         if command == "reminder:schedule":
             return self.show_schedule(chat_id, user_id, callback_id)
 
@@ -39,8 +44,11 @@ class ReminderBotLogic:
         if command.startswith("feedback:rating:"):
             return self.save_feedback_rating(chat_id, user_id, command, callback_id)
 
-        if command == "feedback:clear":
-            return self.clear_feedback_message(chat_id, callback_id)
+        if command.startswith("feedback:comment:"):
+            return self.ask_comment(chat_id, user_id, command, callback_id)
+
+        if command == "feedback:no_comment":
+            return self.skip_comment(chat_id, user_id, callback_id)
 
         return self.register_by_code(chat_id, user_id, user_name, command)
 
@@ -154,6 +162,7 @@ class ReminderBotLogic:
             ),
             "attachments": self.get_keyboard(False)
         }
+
     def save_feedback_rating(self, chat_id, user_id, command, callback_id=None):
         parts = command.split(":")
 
@@ -166,7 +175,7 @@ class ReminderBotLogic:
 
         lesson_id = parts[2]
         rating = int(parts[3])
-    
+
         parent = self.db.get_parent(user_id)
 
         if not parent:
@@ -182,22 +191,105 @@ class ReminderBotLogic:
             "chat_id": chat_id,
             "callback_id": callback_id,
             "text": (
-                f"Спасибо за отзыв! 😊\n\n"
+                "Спасибо за оценку! 😊\n\n"
                 f"Ваша оценка: {'⭐' * rating}\n\n"
+                "Хотите оставить комментарий об уроке?"
+            ),
+            "attachments": [
+                {
+                    "type": "inline_keyboard",
+                    "payload": {
+                        "buttons": [
+                            [
+                                {
+                                    "type": "callback",
+                                    "text": "Добавить комментарий",
+                                    "payload": f"feedback:comment:{lesson_id}"
+                                }
+                            ],
+                            [
+                                {
+                                    "type": "callback",
+                                    "text": "Без комментария",
+                                    "payload": "feedback:no_comment"
+                                }
+                            ]
+                        ]
+                    }
+                }
+            ]
+        }
+
+    def ask_comment(self, chat_id, user_id, command, callback_id=None):
+        parts = command.split(":")
+
+        if len(parts) != 3:
+            return {
+                "chat_id": chat_id,
+                "callback_id": callback_id,
+                "text": "Не удалось начать добавление комментария."
+            }
+
+        lesson_id = parts[2]
+        self.db.set_waiting_for_comment(user_id, lesson_id)
+
+        return {
+            "chat_id": chat_id,
+            "callback_id": callback_id,
+            "text": (
+                "Напишите комментарий об уроке одним сообщением ✍️\n\n"
+                "Например: ребёнку понравилось занятие, всё было понятно."
+            ),
+            "attachments": []
+        }
+
+    def save_comment(self, chat_id, user_id, comment):
+        parent = self.db.get_parent(user_id)
+
+        if not parent:
+            return {
+                "chat_id": chat_id,
+                "text": "Сначала пришлите код группы 🔑"
+            }
+
+        lesson_id = parent.get("pending_feedback_lesson_id")
+
+        if not lesson_id:
+            return {
+                "chat_id": chat_id,
+                "text": "Не найден урок для комментария."
+            }
+
+        self.db.save_feedback_comment(parent["id"], lesson_id, comment)
+        self.db.clear_waiting_for_comment(user_id)
+
+        return {
+            "chat_id": chat_id,
+            "text": (
+                "Спасибо! Комментарий сохранён 😊\n\n"
                 "Выберите действие 👇"
             ),
             "attachments": self.get_keyboard(
                 parent.get("notifications_enabled", False)
             )
         }
- 
 
-    def clear_feedback_message(self, chat_id, callback_id=None):
+    def skip_comment(self, chat_id, user_id, callback_id=None):
+        parent = self.db.get_parent(user_id)
+
+        if parent:
+            self.db.clear_waiting_for_comment(user_id)
+
         return {
             "chat_id": chat_id,
             "callback_id": callback_id,
-            "text": "✅ Сообщение очищено",
-            "attachments": []
+            "text": (
+                "Спасибо за отзыв! 😊\n\n"
+                "Выберите действие 👇"
+            ),
+            "attachments": self.get_keyboard(
+                parent.get("notifications_enabled", False) if parent else False
+            )
         }
 
     def format_schedule(self, lessons):
