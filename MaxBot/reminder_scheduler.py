@@ -1,11 +1,38 @@
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
+import json
 
 from reminder_db import supabase
 from max_api import send_message
 
 
 TIMEZONE = ZoneInfo("Europe/Moscow")
+FEEDBACK_LESSONS_FILE = "feedback_lessons.json"
+
+
+def load_feedback_lessons():
+    try:
+        with open(FEEDBACK_LESSONS_FILE, "r", encoding="utf-8") as file:
+            return json.load(file)
+    except Exception as e:
+        print("FEEDBACK LESSONS LOAD ERROR:", str(e), flush=True)
+        return {"courses": {}}
+
+
+FEEDBACK_LESSONS = load_feedback_lessons()
+
+
+def get_lesson_title(course_name, lesson_number):
+    try:
+        return (
+            FEEDBACK_LESSONS["courses"]
+            [course_name]
+            ["lessons"]
+            [str(lesson_number)]
+            ["title"]
+        )
+    except Exception:
+        return "Тема урока не указана"
 
 
 class ReminderScheduler:
@@ -79,6 +106,10 @@ class ReminderScheduler:
         parents = self.get_active_parents(lesson["group_id"])
         lesson_time = str(lesson["lesson_time"])[:5]
 
+        group = lesson.get("groups") or {}
+        course_name = group.get("course_name", "Курс не указан")
+        lesson_title = get_lesson_title(course_name, lesson["lesson_number"])
+
         for parent in parents:
             chat_id = parent.get("chat_id")
 
@@ -89,6 +120,8 @@ class ReminderScheduler:
                 "📚 Напоминание о занятии\n\n"
                 "Здравствуйте! 😊\n\n"
                 f"Завтра состоится урок №{lesson['lesson_number']}.\n\n"
+                f"📚 Курс: {course_name}\n"
+                f"📝 Тема: {lesson_title}\n"
                 f"📅 Дата: {lesson['lesson_date']}\n"
                 f"⏰ Время: {lesson_time}\n\n"
                 "Ждём вас на занятии! 🚀"
@@ -99,6 +132,10 @@ class ReminderScheduler:
     def send_feedback_request(self, lesson):
         parents = self.get_active_parents(lesson["group_id"])
 
+        group = lesson.get("groups") or {}
+        course_name = group.get("course_name", "Курс не указан")
+        lesson_title = get_lesson_title(course_name, lesson["lesson_number"])
+
         for parent in parents:
             chat_id = parent.get("chat_id")
 
@@ -108,7 +145,9 @@ class ReminderScheduler:
             text = (
                 "⭐ Обратная связь по занятию\n\n"
                 "Здравствуйте! 😊\n\n"
-                f"Урок №{lesson['lesson_number']} уже завершился.\n"
+                f"Урок №{lesson['lesson_number']} уже завершился.\n\n"
+                f"📚 Курс: {course_name}\n"
+                f"📝 Тема: {lesson_title}\n\n"
                 "Пожалуйста, оцените занятие:"
             )
 
