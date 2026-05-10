@@ -261,7 +261,7 @@ def webhook():
                         response_text
                     )
 
-                 else:
+                else:
                     send_message(
                         MAIN_TOKEN,
                         chat_id,
