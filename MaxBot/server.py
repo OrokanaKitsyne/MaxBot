@@ -249,10 +249,26 @@ def webhook():
             user_id = message.get("sender", {}).get("user_id")
             text = (message.get("body", {}).get("text") or "").strip()
 
+
             if chat_id and user_id:
                 response_text = bot.get_response(text, user_id=str(user_id))
-                send_message(MAIN_TOKEN, chat_id, response_text, attachments=get_main_keyboard())
 
+  
+                if str(user_id) in bot.user_states:
+                    send_message(
+                        MAIN_TOKEN,
+                        chat_id,
+                        response_text
+                    )
+
+                 else:
+                    send_message(
+                        MAIN_TOKEN,
+                        chat_id,
+                        response_text,
+                        attachments=get_main_keyboard()
+                    )
+           
     except Exception as e:
         print("MAIN WEBHOOK ERROR:", str(e), flush=True)
 
