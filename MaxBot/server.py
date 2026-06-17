@@ -249,11 +249,9 @@ def webhook():
             user_id = message.get("sender", {}).get("user_id")
             text = (message.get("body", {}).get("text") or "").strip()
 
-
             if chat_id and user_id:
                 response_text = bot.get_response(text, user_id=str(user_id))
 
-  
                 if str(user_id) in bot.user_states:
                     send_message(
                         MAIN_TOKEN,
@@ -268,7 +266,7 @@ def webhook():
                         response_text,
                         attachments=get_main_keyboard()
                     )
-           
+
     except Exception as e:
         print("MAIN WEBHOOK ERROR:", str(e), flush=True)
 
@@ -549,6 +547,55 @@ def sync_schedule():
 
     except Exception as e:
         print("SCHEDULE SYNC ERROR:", str(e), flush=True)
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 500
+
+
+@app.route("/sync/schedule/list", methods=["GET"])
+def get_schedule_list():
+    """
+    Возвращает все занятия из таблицы lessons вместе с данными группы.
+    Используется Google Apps Script для заполнения листа "Расписание".
+
+    Если в переменных окружения задан SYNC_SECRET, Apps Script должен передавать его
+    в заголовке X-Sync-Secret. Если SYNC_SECRET не задан, проверка секрета отключена.
+    """
+    try:
+        sync_secret = os.getenv("SYNC_SECRET", "").strip()
+        if sync_secret:
+            request_secret = request.headers.get("X-Sync-Secret", "").strip()
+            if request_secret != sync_secret:
+                return jsonify({
+                    "status": "error",
+                    "message": "Неверный X-Sync-Secret"
+                }), 401
+
+        from reminder_db import supabase
+
+        result = (
+            supabase
+            .table("lessons")
+            .select(
+                "id, lesson_number, lesson_date, lesson_time, "
+                "reminder_sent, feedback_requested, created_at, "
+                "groups(id, name, course_name, invite_code)"
+            )
+            .order("lesson_date")
+            .order("lesson_time")
+            .execute()
+        )
+
+        lessons = result.data or []
+
+        return jsonify({
+            "status": "ok",
+            "lessons": lessons
+        }), 200
+
+    except Exception as e:
+        print("SCHEDULE LIST ERROR:", str(e), flush=True)
         return jsonify({
             "status": "error",
             "message": str(e)
