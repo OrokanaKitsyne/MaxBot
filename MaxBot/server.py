@@ -430,22 +430,121 @@ def feedback_webhook():
     return jsonify({"status": "ok"}), 200
 
 
+@app.route("/sync/group", methods=["POST"])
+def sync_group():
+    data = request.get_json(silent=True) or {}
+    print("GROUP SYNC DATA:", data, flush=True)
+
+    try:
+        sync_secret = os.getenv("SYNC_SECRET", "").strip()
+        if sync_secret:
+            request_secret = request.headers.get("X-Sync-Secret", "").strip()
+            if request_secret != sync_secret:
+                return jsonify({
+                    "status": "error",
+                    "message": "Неверный X-Sync-Secret"
+                }), 401
+
+        from reminder_db import supabase
+
+        invite_code = str(data.get("invite_code", "")).strip()
+        name = str(data.get("name", "")).strip()
+        course_name = str(data.get("course_name", "")).strip()
+
+        if not invite_code or not name or not course_name:
+            return jsonify({
+                "status": "error",
+                "message": "Не заполнены invite_code, name или course_name"
+            }), 400
+
+        group_data = {
+            "invite_code": invite_code,
+            "name": name,
+            "course_name": course_name
+        }
+
+        existing_result = (
+            supabase
+            .table("groups")
+            .select("id")
+            .eq("invite_code", invite_code)
+            .limit(1)
+            .execute()
+        )
+
+        if existing_result.data:
+            group_id = existing_result.data[0]["id"]
+            result = (
+                supabase
+                .table("groups")
+                .update(group_data)
+                .eq("id", group_id)
+                .execute()
+            )
+            action = "updated"
+        else:
+            result = (
+                supabase
+                .table("groups")
+                .insert(group_data)
+                .execute()
+            )
+            action = "inserted"
+
+        return jsonify({
+            "status": "ok",
+            "action": action,
+            "message": "Группа сохранена",
+            "group": result.data
+        }), 200
+
+    except Exception as e:
+        print("GROUP SYNC ERROR:", str(e), flush=True)
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 500
+
+
+@app.route("/sync/group/list", methods=["GET"])
+def get_group_list():
+    try:
+        sync_secret = os.getenv("SYNC_SECRET", "").strip()
+        if sync_secret:
+            request_secret = request.headers.get("X-Sync-Secret", "").strip()
+            if request_secret != sync_secret:
+                return jsonify({
+                    "status": "error",
+                    "message": "Неверный X-Sync-Secret"
+                }), 401
+
+        from reminder_db import supabase
+
+        result = (
+            supabase
+            .table("groups")
+            .select("id, name, course_name, invite_code, created_at")
+            .order("created_at")
+            .execute()
+        )
+
+        groups = result.data or []
+
+        return jsonify({
+            "status": "ok",
+            "groups": groups
+        }), 200
+
+    except Exception as e:
+        print("GROUP LIST ERROR:", str(e), flush=True)
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 500
+
+
 @app.route("/sync/schedule", methods=["POST"])
 def sync_schedule():
-    """
-    Принимает одну строку расписания из Google Apps Script и сохраняет занятие в Supabase.
-
-    Ожидаемый JSON:
-    {
-        "invite_code": "WEB2026",
-        "lesson_number": 1,
-        "lesson_date": "2026-09-05",
-        "lesson_time": "12:00:00"
-    }
-
-    Если в переменных окружения задан SYNC_SECRET, Apps Script должен передавать его
-    в заголовке X-Sync-Secret. Если SYNC_SECRET не задан, проверка секрета отключена.
-    """
     data = request.get_json(silent=True) or {}
     print("SCHEDULE SYNC DATA:", data, flush=True)
 
@@ -555,13 +654,6 @@ def sync_schedule():
 
 @app.route("/sync/schedule/list", methods=["GET"])
 def get_schedule_list():
-    """
-    Возвращает все занятия из таблицы lessons вместе с данными группы.
-    Используется Google Apps Script для заполнения листа "Расписание".
-
-    Если в переменных окружения задан SYNC_SECRET, Apps Script должен передавать его
-    в заголовке X-Sync-Secret. Если SYNC_SECRET не задан, проверка секрета отключена.
-    """
     try:
         sync_secret = os.getenv("SYNC_SECRET", "").strip()
         if sync_secret:
