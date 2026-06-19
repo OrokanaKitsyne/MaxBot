@@ -124,7 +124,7 @@ class ReminderScheduler:
                 f"📝 Тема: {lesson_title}\n"
                 f"📅 Дата: {lesson['lesson_date']}\n"
                 f"⏰ Время: {lesson_time}\n\n"
-                "Ждём вас на занятии! 🚀"
+                "Ждём детей на занятии! 🚀"
             )
 
             send_message(self.token, chat_id, text)
