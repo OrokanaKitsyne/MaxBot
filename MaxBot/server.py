@@ -694,6 +694,49 @@ def get_schedule_list():
         }), 500
 
 
+
+@app.route("/sync/feedback/list", methods=["GET"])
+def get_feedback_list():
+    try:
+        sync_secret = os.getenv("SYNC_SECRET", "").strip()
+        if sync_secret:
+            request_secret = request.headers.get("X-Sync-Secret", "").strip()
+            if request_secret != sync_secret:
+                return jsonify({
+                    "status": "error",
+                    "message": "Неверный X-Sync-Secret"
+                }), 401
+
+        from reminder_db import supabase
+
+        result = (
+            supabase
+            .table("feedback")
+            .select(
+                "id, rating, comment, created_at, "
+                "parents(parent_name, child_name, max_user_id), "
+                "lessons(lesson_number, lesson_date, lesson_time, "
+                "groups(name, course_name, invite_code))"
+            )
+            .order("created_at", desc=True)
+            .execute()
+        )
+
+        feedback = result.data or []
+
+        return jsonify({
+            "status": "ok",
+            "feedback": feedback
+        }), 200
+
+    except Exception as e:
+        print("FEEDBACK LIST ERROR:", str(e), flush=True)
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 500
+
+
 @app.route("/webhook/reminder", methods=["POST"])
 def reminder_webhook():
     data = request.get_json(silent=True) or {}
